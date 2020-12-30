@@ -1,18 +1,32 @@
 ---
 title: "MCL19 ITS2"
 output: html_notebook
+editor_options: 
+  chunk_output_type: console
 ---
 This is from the Microbial Landscape experiment (summer). ITS2 data from Symportal. 
 ```{r}
+rm(list=ls())
+
 library(tidyverse)
 library(readxl)
 library(phyloseq)
 library(janitor)
+library("writexl")
+
 ```
 
-# Read in coral ITS2 profiles
+# Read in coral ITS2 profiles: "coral"
 ```{r}
-sam0 <- readxl::read_xlsx("MCL_SymPortal_submission_input.xlsx", skip = 1) #Symportal submission form
+#add metadata to symportal submission data
+Symp_sub<-readxl::read_xlsx("MCL_SymPortal_submission_input.xlsx", skip = 1)
+Metadata<-read.csv("MCL19_metadata_20200402.csv")
+Metadata<-rename(Metadata, sample_name=UNIQUEID) #rename UNIQUEID column to sample_name
+Symp_sub_Meta<-left_join(Symp_sub, Metadata, by="sample_name") # merge
+#save in correct format:
+write_xlsx(Symp_sub_Meta,"MCL_Symp_Metadata.xlsx")
+
+sam0 <- readxl::read_xlsx("MCL_Symp_Metadata.xlsx") #Symportal metadata combined from above
 sam1 <- as.matrix(sam0[, -1])
 rownames(sam1) <- sam0$sample_name
 sam <- sample_data(data.frame(sam1))
@@ -24,6 +38,7 @@ tax0 <- read_tsv(
   gather(UID, value, -1) %>% 
   spread(1, value) %>%
   clean_names()
+
 tax1 <- as.matrix(tax0[, -1], dimnames = list(tax0$uid, colnames(tax0[-1])))
 rownames(tax1) <- tax0$uid
 tax <- tax_table(tax1)
@@ -39,11 +54,14 @@ rownames(otu1) <- otu0$sample_name
 otu <- otu_table(otu1, taxa_are_rows = FALSE)
 
 coral <- phyloseq(otu, tax, sam)
+
+
+
 ```
 
-# Read in coral post-QC sequence variants
+# Read in coral post-QC sequence variants: "coralDIV"
 ```{r}
-sam0 <- read_xlsx("MCL_SymPortal_submission_input.xlsx", skip = 1)
+sam0 <- read_xlsx("MCL_Symp_Metadata.xlsx")
 rownames(sam0) <- sam0$sample_name
 sam <- sample_data(data.frame(sam0))
 taxnames <- read_tsv(
@@ -84,7 +102,7 @@ library(multcompView)
 # Load data (see data_exploration.Rmd)
 load("data/coral_phyloseq.RData")
 ```
-
+Hey what does this do?
 ```{r}
 coral2 <- coral %>%
   subset_samples(!is.na(host_species))
@@ -92,7 +110,7 @@ coralDIV2 <- coralDIV %>%
   subset_samples(!is.na(host_species))
 ```
 
-
+Monster all data vis (not helpful)
 ```{r, fig.width = 10, fig.height = 40}
 # Plot ITS2 profiles for each coral sample by species and site
 plot_bar(coral, fill = "its2_type_profile") +
@@ -114,3 +132,60 @@ ggplot(divclades, aes(x = Sample, y = Abundance, fill = clade)) +
   geom_bar(stat = "identity") +
   labs(title=NULL, x = NULL, y = "Relative abundance")
 ```
+
+Data wrangle: remove samples with under 5k 
+```{r}
+#lets see what is up with the low samps
+
+LowSamps<-readxl::read_xlsx("20201214_matsuda_MCL/post_med_seqs/133_20201216_DBV_20201216T011417.seqs.absolute.meta_only.xlsx")
+
+LowSamps$post_taxa_id_absolute_symbiodiniaceae_seqs_log<-log10(LowSamps$post_taxa_id_absolute_symbiodiniaceae_seqs)
+hist(LowSamps$post_taxa_id_absolute_symbiodiniaceae_seqs_log, breaks=20)
+
+```
+Look at the low samples: no patterns
+```{r}
+sample_names(coralDIV2) #pring sample names
+
+#look at NTCs
+#Negative Controls
+  NTCtest <- subset_samples(coralDIV2, sample_name =="NTC"| sample_name =="NTC2") #subset multiple samples
+   NTCtest.prune <- prune_taxa(taxa_sums(NTCtest) >0, NTCtest)
+     plot_bar(NTCtest.prune,fill = "DIV")+
+      geom_bar(aes(color=DIV, fill=DIV), stat="identity", position="stack")
+     
+#Samples under 2000 hits 
+LOWtest <- subset_samples(coralDIV2, sample_name =="S6"| sample_name =="G7"|sample_name =="Q11"|sample_name =="G8"|sample_name =="B13"|sample_name =="B6"|sample_name =="C14") #subset multiple samples
+   LOWtest.prune <- prune_taxa(taxa_sums(LOWtest) >0, LOWtest) # prune all 0s
+     
+   plot_bar(LOWtest.prune,fill = "DIV")+                     # plot DIVS
+    geom_bar(aes(color=DIV, fill=DIV), stat="identity", position="stack")
+     
+   plot_bar(LOWtest.prune,fill = "clade")+                     # plot Clades
+      geom_bar(aes(color=clade, fill=clade), stat="identity", position="stack")
+     
+```
+ 
+Remove low samples from the datasets
+```{r}
+#DIVs
+to_remove <- c("NTC", "NTC2", "S6", "G7","Q11","G8", "B13","B6") #make list of samples to remove with less than 2000 seqs
+coralDIV2.prune <- prune_samples(!(sample_names(coralDIV2) %in% to_remove), coralDIV2) #remove
+#sample_names(coralDIV2.prune) # check to see they are removed
+
+#Pros
+to_remove <- c("NTC", "NTC2", "S6", "G7","Q11","G8", "B13","B6") #make list of samples to remove with less than 2000 seqs
+coral2.prune <- prune_samples(!(sample_names(coral2) %in% to_remove), coral2) #remove
+#sample_names(coral2.prune) # check to see they are removed
+
+```
+
+Subset by colony DIV
+```{r}
+sample_variables(coralDIV2.prune)
+ColonyA <- subset_samples(coralDIV2.prune, sample_name =="C14") #subset multiple samples
+   LOWtest.prune <- prune_taxa(taxa_sums(LOWtest) >0, LOWtest) # prune all 0s
+
+
+```
+
