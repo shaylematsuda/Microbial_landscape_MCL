@@ -15,9 +15,10 @@ library(janitor)
 library("writexl")
 
 ```
-
-# Read in coral ITS2 profiles: "coral"
-```{r}
+Reading in data with Ross code, this is relA. 
+# Relative Abundance
+Read in coral ITS2 profiles: "coral"
+```{r} 
 #add metadata to symportal submission data
 Symp_sub<-readxl::read_xlsx("MCL_SymPortal_submission_input.xlsx", skip = 1)
 Metadata<-read.csv("MCL19_metadata_20200402.csv")
@@ -58,8 +59,7 @@ coral <- phyloseq(otu, tax, sam)
 
 
 ```
-
-# Read in coral post-QC sequence variants: "coralDIV"
+Read in coral post-QC sequence variants: "coralDIV"
 ```{r}
 sam0 <- read_xlsx("MCL_Symp_Metadata.xlsx")
 rownames(sam0) <- sam0$sample_name
@@ -88,9 +88,70 @@ coralDIV <- phyloseq(otu, tax, sam)
 ```{r}
 save(coral, coralDIV, file = "data/coral_phyloseq.RData")
 ```
+#Reading in data by ABSOLUTE abundances
+so this is the same as above just by absolute
 
+Profiles
+```{r}
 
-#Analysis (RCunning Script)
+sam0 <- readxl::read_xlsx("MCL_Symp_Metadata.xlsx") #Symportal metadata combined from above
+sam1 <- as.matrix(sam0[, -1])
+rownames(sam1) <- sam0$sample_name
+sam <- sample_data(data.frame(sam1))
+
+tax0 <- read_tsv(
+  file  = "20201214_matsuda_MCL/its2_type_profiles/133_20201216_DBV_20201216T011417.profiles.absolute.abund_and_meta.txt",
+  n_max = 6) %>%
+  dplyr::select(-2) %>% 
+  gather(UID, value, -1) %>% 
+  spread(1, value) %>%
+  clean_names()
+
+tax1 <- as.matrix(tax0[, -1], dimnames = list(tax0$uid, colnames(tax0[-1])))
+rownames(tax1) <- tax0$uid
+tax <- tax_table(tax1)
+
+otu0 <- read_tsv(
+  file  = "20201214_matsuda_MCL/its2_type_profiles/133_20201216_DBV_20201216T011417.profiles.absolute.abund_and_meta.txt") %>% 
+  rename(sample_name = X2) %>%
+  select(-1) %>%
+  slice(7:n()) %>%
+  mutate_at(2:ncol(.), as.numeric)
+otu1 <- as.matrix(otu0[, -1])
+rownames(otu1) <- otu0$sample_name
+otu <- otu_table(otu1, taxa_are_rows = FALSE)
+
+coral_absolutePro <- phyloseq(otu, tax, sam)
+```
+DIVs absolute
+```{r}
+
+taxnames <- read_tsv(
+  file  = "20201214_matsuda_MCL/post_med_seqs/133_20201216_DBV_20201216T011417.seqs.absolute.abund_only.txt",
+  n_max = 0) %>%
+  select(-1) %>%
+  names(.)
+tax0 <- data_frame(
+  DIV = taxnames,
+  clade = str_extract(DIV, "[A-Z]")
+)
+tax1 <- as.matrix(tax0)
+rownames(tax1) <- tax0$DIV
+tax <- tax_table(tax1)
+otu0 <- read_tsv(
+  file  = "20201214_matsuda_MCL/post_med_seqs/133_20201216_DBV_20201216T011417.seqs.absolute.abund_and_meta.txt") %>%
+  select(-1, -(3:33))
+otu1 <- as.matrix(otu0[, -1])
+rownames(otu1) <- otu0$sample_name
+otu <- otu_table(otu1, taxa_are_rows = FALSE)
+coral_Absolute_DIV <- phyloseq(otu, tax, sam)
+```
+Save as an obj
+```{r}
+save(coral_absolutePro, coral_Absolute_DIV, file = "data/Absolute_coral_phyloseq.RData")
+```
+
+#Analysis (RCunning Script) REL Abundance -  
 ```{r}
 library(tidyverse)
 library(janitor)
@@ -99,6 +160,8 @@ library(zoo)
 library(stringr)
 library(vegan)
 library(multcompView)
+library("ggpubr")
+
 # Load data (see data_exploration.Rmd)
 load("data/coral_phyloseq.RData")
 ```
@@ -106,8 +169,14 @@ Hey what does this do?
 ```{r}
 coral2 <- coral %>%
   subset_samples(!is.na(host_species))
-coralDIV2 <- coralDIV %>%
+coralDIV2 <- coralDIV %>% 
   subset_samples(!is.na(host_species))
+
+# HERE YOU MAKE RELA DATA ACTUALLY OUT OF 100% 
+# Transform to relative abundance
+coral2 <- transform_sample_counts(coral2, function(x) 100 * x/sum(x))
+coralDIV2 <- transform_sample_counts(coralDIV2, function(x) 100 * x/sum(x))
+
 ```
 
 Monster all data vis (not helpful)
@@ -167,7 +236,7 @@ LOWtest <- subset_samples(coralDIV2, sample_name =="S6"| sample_name =="G7"|samp
 ```
  
 Remove low samples from the datasets
-```{r}
+```{r} 
 #DIVs
 to_remove <- c("NTC", "NTC2", "S6", "G7","Q11","G8", "B13","B6") #make list of samples to remove with less than 2000 seqs
 coralDIV2.prune <- prune_samples(!(sample_names(coralDIV2) %in% to_remove), coralDIV2) #remove
@@ -180,12 +249,347 @@ coral2.prune <- prune_samples(!(sample_names(coral2) %in% to_remove), coral2) #r
 
 ```
 
-Subset by colony DIV
+Subset by colony DIV, data setup
 ```{r}
-sample_variables(coralDIV2.prune)
-ColonyA <- subset_samples(coralDIV2.prune, sample_name =="C14") #subset multiple samples
-   LOWtest.prune <- prune_taxa(taxa_sums(LOWtest) >0, LOWtest) # prune all 0s
+sample_variables(coralDIV2.prune) #what are the variables
 
+Mcap_970 <- subset_samples(coralDIV2.prune, TagID =="970") #Subset by colony  
+Mcap_965 <- subset_samples(coralDIV2.prune, TagID =="965") #Subset by colony  
+Mcap_969 <- subset_samples(coralDIV2.prune, TagID =="969") #Subset by colony  
+Mcap_972 <- subset_samples(coralDIV2.prune, TagID =="972") #Subset by colony  
+Mcap_971 <- subset_samples(coralDIV2.prune, TagID =="971") #Subset by colony 
+Mcap_968 <- subset_samples(coralDIV2.prune, TagID =="968") #Subset by colony 
+Mcap_966 <- subset_samples(coralDIV2.prune, TagID =="966") #Subset by colony 
+Mcap_978 <- subset_samples(coralDIV2.prune, TagID =="978") #Subset by colony 
+Mcap_963 <- subset_samples(coralDIV2.prune, TagID =="963") #Subset by colony 
+Mcap_961 <- subset_samples(coralDIV2.prune, TagID =="961") #Subset by colony 
+Mcap_981 <- subset_samples(coralDIV2.prune, TagID =="981") #Subset by colony 
+Mcap_967 <- subset_samples(coralDIV2.prune, TagID =="967") #Subset by colony 
+Mcap_983 <- subset_samples(coralDIV2.prune, TagID =="983") #Subset by colony 
+Mcap_974 <- subset_samples(coralDIV2.prune, TagID =="974") #Subset by colony 
+Mcap_984 <- subset_samples(coralDIV2.prune, TagID =="984") #Subset by colony 
+Mcap_962 <- subset_samples(coralDIV2.prune, TagID =="962") #Subset by colony 
+Mcap_957 <- subset_samples(coralDIV2.prune, TagID =="957") #Subset by colony 
+Mcap_945 <- subset_samples(coralDIV2.prune, TagID =="945") #Subset by colony 
+Mcap_960 <- subset_samples(coralDIV2.prune, TagID =="960") #Subset by colony 
+Mcap_976 <- subset_samples(coralDIV2.prune, TagID =="976") #Subset by colony 
+Mcap_985 <- subset_samples(coralDIV2.prune, TagID =="985") #Subset by colony 
+Mcap_964 <- subset_samples(coralDIV2.prune, TagID =="964") #Subset by colony 
+Mcap_959 <- subset_samples(coralDIV2.prune, TagID =="959") #Subset by colony 
+Mcap_980 <- subset_samples(coralDIV2.prune, TagID =="980") #Subset by colony 
+  
+```
+Plots DIVS
+```{r}
+
+#try to transform samp counts
+
+#for the legend
+ plot_bar(Mcap_970,fill = "DIV")+
+      geom_bar(aes(color=DIV, fill=DIV), stat="identity", position="stack")
+
+Mcap_970_plot<-plot_bar(Mcap_970, "Sample_name", fill="DIV", title="Mcap_970")+
+   theme(legend.position="none");Mcap_970_plot
+Mcap_965_plot<-plot_bar(Mcap_965, "Sample_name", fill="DIV", title="Mcap_965")+
+   theme(legend.position="none");Mcap_965_plot
+Mcap_969_plot<-plot_bar(Mcap_969, "Sample_name", fill="DIV", title="Mcap_969")+
+   theme(legend.position="none");Mcap_969_plot
+Mcap_972_plot<-plot_bar(Mcap_972, "Sample_name", fill="DIV", title="Mcap_972")+
+   theme(legend.position="none");Mcap_972_plot
+Mcap_971_plot<-plot_bar(Mcap_971, "Sample_name", fill="DIV", title="Mcap_971")+
+   theme(legend.position="none");Mcap_971_plot
+Mcap_968_plot<-plot_bar(Mcap_968, "Sample_name", fill="DIV", title="Mcap_968")+
+   theme(legend.position="none");Mcap_968_plot
+Mcap_966_plot<-plot_bar(Mcap_966, "Sample_name", fill="DIV", title="Mcap_966")+
+   theme(legend.position="none");Mcap_966_plot
+Mcap_978_plot<-plot_bar(Mcap_978, "Sample_name", fill="DIV", title="Mcap_978")+
+   theme(legend.position="none");Mcap_978_plot
+Mcap_963_plot<-plot_bar(Mcap_963, "Sample_name", fill="DIV", title="Mcap_963")+
+   theme(legend.position="none");Mcap_963_plot
+Mcap_961_plot<-plot_bar(Mcap_961, "Sample_name", fill="DIV", title="Mcap_961")+
+   theme(legend.position="none");Mcap_961_plot
+Mcap_981_plot<-plot_bar(Mcap_981, "Sample_name", fill="DIV", title="Mcap_981")+
+   theme(legend.position="none");Mcap_981_plot
+Mcap_967_plot<-plot_bar(Mcap_967, "Sample_name", fill="DIV", title="Mcap_967")+
+   theme(legend.position="none");Mcap_967_plot
+Mcap_983_plot<-plot_bar(Mcap_983, "Sample_name", fill="DIV", title="Mcap_983")+
+   theme(legend.position="none");Mcap_983_plot
+Mcap_974_plot<-plot_bar(Mcap_974, "Sample_name", fill="DIV", title="Mcap_974")+
+   theme(legend.position="none");Mcap_974_plot
+Mcap_984_plot<-plot_bar(Mcap_984, "Sample_name", fill="DIV", title="Mcap_984")+
+   theme(legend.position="none");Mcap_984_plot
+Mcap_962_plot<-plot_bar(Mcap_962, "Sample_name", fill="DIV", title="Mcap_962")+
+   theme(legend.position="none");Mcap_962_plot
+Mcap_957_plot<-plot_bar(Mcap_957, "Sample_name", fill="DIV", title="Mcap_957")+
+   theme(legend.position="none");Mcap_957_plot
+Mcap_945_plot<-plot_bar(Mcap_945, "Sample_name", fill="DIV", title="Mcap_945")+
+   theme(legend.position="none");Mcap_945_plot
+Mcap_960_plot<-plot_bar(Mcap_960, "Sample_name", fill="DIV", title="Mcap_960")+
+   theme(legend.position="none");Mcap_960_plot
+Mcap_976_plot<-plot_bar(Mcap_976, "Sample_name", fill="DIV", title="Mcap_976")+
+   theme(legend.position="none");Mcap_976_plot
+Mcap_985_plot<-plot_bar(Mcap_985, "Sample_name", fill="DIV", title="Mcap_985")+
+   theme(legend.position="none");Mcap_985_plot
+Mcap_964_plot<-plot_bar(Mcap_964, "Sample_name", fill="DIV", title="Mcap_964")+
+   theme(legend.position="none");Mcap_964_plot
+Mcap_985_plot<-plot_bar(Mcap_985, "Sample_name", fill="DIV", title="Mcap_985")+
+   theme(legend.position="none");Mcap_985_plot
+Mcap_959_plot<-plot_bar(Mcap_959, "Sample_name", fill="DIV", title="Mcap_959")+
+   theme(legend.position="none");Mcap_959_plot
+Mcap_980_plot<-plot_bar(Mcap_980, "Sample_name", fill="DIV", title="Mcap_980")+
+   theme(legend.position="none");Mcap_980_plot
+
+
+Mcap_DIV_plot1 <- ggarrange(Mcap_970_plot, Mcap_965_plot,Mcap_969_plot,Mcap_972_plot, Mcap_971_plot,Mcap_968_plot,Mcap_966_plot,Mcap_978_plot,
+                    #labels = c("A", "B", "C","D","E","F"),
+                    ncol = 4, nrow = 2);Mcap_DIV_plot1
+
+Mcap_DIV_plot2 <- ggarrange(Mcap_963_plot, Mcap_961_plot,Mcap_981_plot,Mcap_967_plot,
+Mcap_983_plot,Mcap_974_plot,Mcap_984_plot,Mcap_962_plot,
+                    #labels = c("A", "B", "C","D","E","F"),
+                    ncol = 4, nrow = 2);Mcap_DIV_plot2
+
+Mcap_DIV_plot3 <- ggarrange(Mcap_957_plot,Mcap_945_plot,Mcap_960_plot,Mcap_976_plot,
+Mcap_985_plot,Mcap_964_plot,Mcap_985_plot,Mcap_964_plot,Mcap_985_plot,Mcap_959_plot,Mcap_980_plot,
+                    #labels = c("A", "B", "C","D","E","F"),
+                    ncol = 4, nrow = 3);Mcap_DIV_plot3
 
 ```
 
+PROFILES
+Subset by colony PROFILE, data setup
+```{r}
+
+library("RColorBrewer")
+getPalette = colorRampPalette(brewer.pal(8, "Dark2"))
+
+speciesList = unique(tax_table(coral2.prune)[,"its2_type_profile"])
+speciesPalette = getPalette(length(speciesList))
+names(speciesPalette) = speciesList
+
+#scale_color_manual(values=speciesPalette)
+#scale_fill_manual(values= speciesPalette)
+
+#this works but you need better pallet color = grDevices::colors()[grep('gr(a|e)y', grDevices::colors(), invert = T)]
+
+
+
+
+
+sample_variables(coral2.prune) #what are the variables
+
+Mcap_970_Pro <- subset_samples(coral2.prune, TagID =="970") #Subset by colony  
+Mcap_965_Pro <- subset_samples(coral2.prune, TagID =="965") #Subset by colony  
+Mcap_969_Pro <- subset_samples(coral2.prune, TagID =="969") #Subset by colony  
+Mcap_972_Pro <- subset_samples(coral2.prune, TagID =="972") #Subset by colony  
+Mcap_971_Pro <- subset_samples(coral2.prune, TagID =="971") #Subset by colony 
+Mcap_968_Pro <- subset_samples(coral2.prune, TagID =="968") #Subset by colony 
+Mcap_966_Pro <- subset_samples(coral2.prune, TagID =="966") #Subset by colony 
+Mcap_978_Pro <- subset_samples(coral2.prune, TagID =="978") #Subset by colony 
+Mcap_963_Pro <- subset_samples(coral2.prune, TagID =="963") #Subset by colony 
+Mcap_961_Pro <- subset_samples(coral2.prune, TagID =="961") #Subset by colony 
+Mcap_981_Pro <- subset_samples(coral2.prune, TagID =="981") #Subset by colony 
+Mcap_967_Pro <- subset_samples(coral2.prune, TagID =="967") #Subset by colony 
+Mcap_983_Pro <- subset_samples(coral2.prune, TagID =="983") #Subset by colony 
+Mcap_974_Pro <- subset_samples(coral2.prune, TagID =="974") #Subset by colony 
+Mcap_984_Pro <- subset_samples(coral2.prune, TagID =="984") #Subset by colony 
+Mcap_962_Pro <- subset_samples(coral2.prune, TagID =="962") #Subset by colony 
+Mcap_957_Pro <- subset_samples(coral2.prune, TagID =="957") #Subset by colony 
+Mcap_945_Pro <- subset_samples(coral2.prune, TagID =="945") #Subset by colony 
+Mcap_960_Pro <- subset_samples(coral2.prune, TagID =="960") #Subset by colony 
+Mcap_976_Pro <- subset_samples(coral2.prune, TagID =="976") #Subset by colony 
+Mcap_985_Pro <- subset_samples(coral2.prune, TagID =="985") #Subset by colony 
+Mcap_964_Pro <- subset_samples(coral2.prune, TagID =="964") #Subset by colony 
+Mcap_959_Pro <- subset_samples(coral2.prune, TagID =="959") #Subset by colony 
+Mcap_980c <- subset_samples(coral2.prune, TagID =="980") #Subset by colony 
+  
+```
+Plots PRO
+```{r}
+#for the legend
+ plot_bar(Mcap_970_Pro,fill = "its2_type_profile")+
+      geom_bar(aes(color=its2_type_profile, fill=its2_type_profile), stat="identity", position="stack")
+
+
+Mcap_970_PRO_plot<-plot_bar(Mcap_970_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_970_Pro")+
+   theme(legend.position="none")+scale_fill_manual(values= speciesPalette);Mcap_970_PRO_plot
+Mcap_965_PRO_plot<-plot_bar(Mcap_965_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_965_Pro")+
+   theme(legend.position="none");Mcap_965_PRO_plot
+Mcap_969_PRO_plot<-plot_bar(Mcap_969_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_969_Pro")+
+   theme(legend.position="none");Mcap_969_PRO_plot
+Mcap_972_PRO_plot<-plot_bar(Mcap_972_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_972_Pro")+
+   theme(legend.position="none");Mcap_972_PRO_plot
+Mcap_971_PRO_plot<-plot_bar(Mcap_971_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_971_Pro")+
+   theme(legend.position="none");Mcap_971_PRO_plot
+Mcap_968_PRO_plot<-plot_bar(Mcap_968_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_968_Pro")+
+   theme(legend.position="none");Mcap_968_PRO_plot
+Mcap_966_PRO_plot<-plot_bar(Mcap_966_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_966_Pro")+
+   theme(legend.position="none");Mcap_966_PRO_plot
+Mcap_978_PRO_plot<-plot_bar(Mcap_978_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_978_Pro")+
+   theme(legend.position="none");Mcap_978_PRO_plot
+Mcap_963_PRO_plot<-plot_bar(Mcap_963_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_963_Pro")+
+   theme(legend.position="none");Mcap_963_PRO_plot
+Mcap_961_PRO_plot<-plot_bar(Mcap_961_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_961_Pro")+
+   theme(legend.position="none");Mcap_961_PRO_plot
+Mcap_981_PRO_plot<-plot_bar(Mcap_981_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_981_Pro")+
+   theme(legend.position="none");Mcap_981_PRO_plot
+Mcap_967_PRO_plot<-plot_bar(Mcap_967_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_967_Pro")+
+   theme(legend.position="none");Mcap_967_PRO_plot
+Mcap_983_PRO_plot<-plot_bar(Mcap_983_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_983_Pro")+
+   theme(legend.position="none");Mcap_983_PRO_plot
+Mcap_974_PRO_plot<-plot_bar(Mcap_974_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_974_Pro")+
+   theme(legend.position="none");Mcap_974_PRO_plot
+Mcap_984_PRO_plot<-plot_bar(Mcap_984_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_984_Pro")+
+   theme(legend.position="none");Mcap_984_PRO_plot
+Mcap_962_PRO_plot<-plot_bar(Mcap_962_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_962_Pro")+
+   theme(legend.position="none");Mcap_962_PRO_plot
+Mcap_957_PRO_plot<-plot_bar(Mcap_957_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_957_Pro")+
+   theme(legend.position="none");Mcap_957_PRO_plot
+Mcap_945_PRO_plot<-plot_bar(Mcap_945_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_945_Pro")+
+   theme(legend.position="none");Mcap_945_PRO_plot
+Mcap_960_PRO_plot<-plot_bar(Mcap_960_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_960_Pro")+
+   theme(legend.position="none");Mcap_960_PRO_plot
+Mcap_976_PRO_plot<-plot_bar(Mcap_976_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_976_Pro")+
+   theme(legend.position="none");Mcap_976_PRO_plot
+Mcap_985_PRO_plot<-plot_bar(Mcap_985_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_985_Pro")+
+   theme(legend.position="none");Mcap_985_PRO_plot
+Mcap_964_PRO_plot<-plot_bar(Mcap_964_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_964_Pro")+
+   theme(legend.position="none");Mcap_964_PRO_plot
+Mcap_985_PRO_plot<-plot_bar(Mcap_985_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_985_Pro")+
+   theme(legend.position="none");Mcap_985_PRO_plot
+Mcap_959_PRO_plot<-plot_bar(Mcap_959_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_959_Pro")+
+   theme(legend.position="none");Mcap_959_PRO_plot
+Mcap_980_PRO_plot<-plot_bar(Mcap_980_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_980_Pro")+
+   theme(legend.position="none");Mcap_980_PRO_plot
+
+
+Mcap_DIV_PRO_plot1 <- ggarrange(Mcap_970_PRO_plot, Mcap_965_PRO_plot,Mcap_969_PRO_plot,Mcap_972_PRO_plot, Mcap_971_PRO_plot,Mcap_968_PRO_plot,Mcap_966_PRO_plot,Mcap_978_PRO_plot,
+                    #labels = c("A", "B", "C","D","E","F"),
+                    ncol = 4, nrow = 2);Mcap_DIV_PRO_plot1
+
+Mcap_DIV_PRO_plot2 <- ggarrange(Mcap_963_PRO_plot, Mcap_961_PRO_plot,Mcap_981_PRO_plot,Mcap_967_PRO_plot,
+Mcap_983_PRO_plot,Mcap_974_PRO_plot,Mcap_984_PRO_plot,Mcap_962_PRO_plot,
+                    #labels = c("A", "B", "C","D","E","F"),
+                    ncol = 4, nrow = 2);Mcap_DIV_PRO_plot2
+
+Mcap_DIV_PRO_plot3 <- ggarrange(Mcap_957_PRO_plot,Mcap_945_PRO_plot,Mcap_960_PRO_plot,Mcap_976_PRO_plot,
+Mcap_985_PRO_plot,Mcap_964_PRO_plot,Mcap_985_PRO_plot,Mcap_964_PRO_plot,Mcap_985_PRO_plot,Mcap_959_PRO_plot,Mcap_980_PRO_plot,
+                    #labels = c("A", "B", "C","D","E","F"),
+                    ncol = 4, nrow = 3);Mcap_DIV_PRO_plot3
+
+```
+Plots CLADE
+```{r}
+
+#scale_color_manual(values=speciesPalette)
+#scale_fill_manual(values= speciesPalette)
+ 
+Mcap_970_clade_plot<-plot_bar(Mcap_970_Pro, "Sample_name", fill="clade", title="Mcap_970_clade")+
+   theme(legend.position="none");Mcap_970_clade_plot
+Mcap_965_clade_plot<-plot_bar(Mcap_965_Pro, "Sample_name", fill="clade", title="Mcap_965_clade")+
+   theme(legend.position="none");Mcap_965_clade_plot
+Mcap_969_clade_plot<-plot_bar(Mcap_969_Pro, "Sample_name", fill="clade", title="Mcap_969_clade")+
+   theme(legend.position="none");Mcap_969_clade_plot
+Mcap_972_clade_plot<-plot_bar(Mcap_972_Pro, "Sample_name", fill="clade", title="Mcap_972_clade")+
+   theme(legend.position="none");Mcap_972_clade_plot
+Mcap_971_clade_plot<-plot_bar(Mcap_971_Pro, "Sample_name", fill="clade", title="Mcap_971_clade")+
+   theme(legend.position="none");Mcap_971_clade_plot
+Mcap_968_clade_plot<-plot_bar(Mcap_968_Pro, "Sample_name", fill="clade", title="Mcap_968_clade")+
+   theme(legend.position="none");Mcap_968_clade_plot
+Mcap_966_clade_plot<-plot_bar(Mcap_966_Pro, "Sample_name", fill="clade", title="Mcap_966_clade")+
+   theme(legend.position="none");Mcap_966_clade_plot
+Mcap_978_clade_plot<-plot_bar(Mcap_978_Pro, "Sample_name", fill="clade", title="Mcap_978_clade")+
+   theme(legend.position="none");Mcap_978_clade_plot
+Mcap_963_clade_plot<-plot_bar(Mcap_963_Pro, "Sample_name", fill="clade", title="Mcap_963_clade")+
+   theme(legend.position="none");Mcap_963_clade_plot
+Mcap_961_clade_plot<-plot_bar(Mcap_961_Pro, "Sample_name", fill="clade", title="Mcap_961_clade")+
+   theme(legend.position="none");Mcap_961_clade_plot
+Mcap_981_clade_plot<-plot_bar(Mcap_981_Pro, "Sample_name", fill="clade", title="Mcap_981_clade")+
+   theme(legend.position="none");Mcap_981_clade_plot
+Mcap_967_clade_plot<-plot_bar(Mcap_967_Pro, "Sample_name", fill="clade", title="Mcap_967_clade")+
+   theme(legend.position="none");Mcap_967_clade_plot
+Mcap_983_clade_plot<-plot_bar(Mcap_983_Pro, "Sample_name", fill="clade", title="Mcap_983_clade")+
+   theme(legend.position="none");Mcap_983_clade_plot
+Mcap_974_clade_plot<-plot_bar(Mcap_974_Pro, "Sample_name", fill="clade", title="Mcap_974_clade")+
+   theme(legend.position="none");Mcap_974_clade_plot
+Mcap_984_clade_plot<-plot_bar(Mcap_984_Pro, "Sample_name", fill="clade", title="Mcap_984_clade")+
+   theme(legend.position="none");Mcap_984_clade_plot
+Mcap_962_clade_plot<-plot_bar(Mcap_962_Pro, "Sample_name", fill="clade", title="Mcap_962_clade")+
+   theme(legend.position="none");Mcap_962_clade_plot
+Mcap_957_clade_plot<-plot_bar(Mcap_957_Pro, "Sample_name", fill="clade", title="Mcap_957_clade")+
+   theme(legend.position="none");Mcap_957_clade_plot
+Mcap_945_clade_plot<-plot_bar(Mcap_945_Pro, "Sample_name", fill="clade", title="Mcap_945_clade")+
+   theme(legend.position="none");Mcap_945_clade_plot
+Mcap_960_clade_plot<-plot_bar(Mcap_960_Pro, "Sample_name", fill="clade", title="Mcap_960_clade")+
+   theme(legend.position="none");Mcap_960_clade_plot
+Mcap_976_clade_plot<-plot_bar(Mcap_976_Pro, "Sample_name", fill="clade", title="Mcap_976_clade")+
+   theme(legend.position="none");Mcap_976_clade_plot
+Mcap_985_clade_plot<-plot_bar(Mcap_985_Pro, "Sample_name", fill="clade", title="Mcap_985_clade")+
+   theme(legend.position="none");Mcap_985_clade_plot
+Mcap_964_clade_plot<-plot_bar(Mcap_964_Pro, "Sample_name", fill="clade", title="Mcap_964_clade")+
+   theme(legend.position="none");Mcap_964_clade_plot
+Mcap_985_clade_plot<-plot_bar(Mcap_985_Pro, "Sample_name", fill="clade", title="Mcap_985_clade")+
+   theme(legend.position="none");Mcap_985_clade_plot
+Mcap_959_clade_plot<-plot_bar(Mcap_959_Pro, "Sample_name", fill="clade", title="Mcap_959_clade")+
+   theme(legend.position="none");Mcap_959_clade_plot
+Mcap_980_clade_plot<-plot_bar(Mcap_980_Pro, "Sample_name", fill="clade", title="Mcap_980_clade")+
+   theme(legend.position="none");Mcap_980_clade_plot
+
+
+Mcap_DIV_clade_plot1 <- ggarrange(Mcap_970_clade_plot, Mcap_965_clade_plot,Mcap_969_clade_plot,Mcap_972_clade_plot, Mcap_971_clade_plot,Mcap_968_clade_plot,Mcap_966_clade_plot,Mcap_978_clade_plot,
+                    #labels = c("A", "B", "C","D","E","F"),
+                    ncol = 4, nrow = 2);Mcap_DIV_clade_plot1
+
+Mcap_DIV_clade_plot2 <- ggarrange(Mcap_963_clade_plot, Mcap_961_clade_plot,Mcap_981_clade_plot,Mcap_967_clade_plot,
+Mcap_983_clade_plot,Mcap_974_clade_plot,Mcap_984_clade_plot,Mcap_962_clade_plot,
+                    #labels = c("A", "B", "C","D","E","F"),
+                    ncol = 4, nrow = 2);Mcap_DIV_clade_plot2
+
+Mcap_DIV_clade_plot3 <- ggarrange(Mcap_957_clade_plot,Mcap_945_clade_plot,Mcap_960_clade_plot,Mcap_976_clade_plot,
+Mcap_985_clade_plot,Mcap_964_clade_plot,Mcap_985_clade_plot,Mcap_964_clade_plot,Mcap_985_clade_plot,Mcap_959_clade_plot,Mcap_980_clade_plot,
+                    #labels = c("A", "B", "C","D","E","F"),
+                    ncol = 4, nrow = 3);Mcap_DIV_clade_plot3
+```
+
+
+
+big fig
+```{r}
+theme_set(theme_classic())
+
+
+
+figureMCL1 <- ggarrange(Mcap_970_clade_plot, Mcap_965_clade_plot, Mcap_969_clade_plot,Mcap_972_clade_plot, 
+                               Mcap_970_PRO_plot, Mcap_965_PRO_plot, Mcap_969_PRO_plot, Mcap_972_PRO_plot, 
+                               Mcap_970_plot, Mcap_965_plot, Mcap_969_plot, Mcap_972_plot, 
+                    ncol = 4, nrow = 3);figureMCL1
+
+figureMCL2 <- ggarrange(Mcap_971_clade_plot,Mcap_968_clade_plot,Mcap_966_clade_plot,Mcap_978_clade_plot, 
+                        Mcap_971_PRO_plot,Mcap_968_PRO_plot,Mcap_966_PRO_plot,Mcap_978_PRO_plot, 
+                        Mcap_971_plot,Mcap_968_plot,Mcap_966_plot,Mcap_978_plot, 
+                    ncol = 4, nrow = 3);figureMCL2
+
+figureMCL3 <- ggarrange(Mcap_963_clade_plot, Mcap_961_clade_plot,Mcap_981_clade_plot,Mcap_967_clade_plot,
+                        Mcap_963_PRO_plot, Mcap_961_PRO_plot,Mcap_981_PRO_plot,Mcap_967_PRO_plot,
+                        Mcap_963_plot, Mcap_961_plot,Mcap_981_plot,Mcap_967_plot,
+                    ncol = 4, nrow = 3);figureMCL3
+
+figureMCL4 <- ggarrange(Mcap_983_clade_plot, Mcap_974_clade_plot,Mcap_984_clade_plot,Mcap_962_clade_plot, 
+                        Mcap_983_PRO_plot, Mcap_974_PRO_plot,Mcap_984_PRO_plot,Mcap_962_PRO_plot, 
+                        Mcap_983_plot,Mcap_974_plot,Mcap_984_plot,Mcap_962_plot, 
+                    ncol = 4, nrow = 3);figureMCL4
+
+figureMCL5 <- ggarrange(Mcap_957_clade_plot, Mcap_945_clade_plot,Mcap_960_clade_plot,Mcap_976_clade_plot,
+                        Mcap_957_PRO_plot,Mcap_945_PRO_plot,Mcap_960_PRO_plot,Mcap_976_PRO_plot,
+                        Mcap_957_plot,Mcap_945_plot,Mcap_960_plot,Mcap_976_plot,
+                    ncol = 4, nrow = 3);figureMCL5
+
+
+figureMCL6 <- ggarrange(Mcap_985_clade_plot, Mcap_964_clade_plot, Mcap_959_clade_plot,Mcap_980_clade_plot,
+                        Mcap_985_PRO_plot, Mcap_964_PRO_plot, Mcap_959_PRO_plot,Mcap_980_PRO_plot,
+                        Mcap_985_plot,Mcap_964_plot,Mcap_959_plot,Mcap_980_plot,
+                    ncol = 4, nrow = 3);figureMCL6
+
+
+
+```
