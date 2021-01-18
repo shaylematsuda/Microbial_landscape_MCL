@@ -359,7 +359,7 @@ Mcap_985_plot,Mcap_964_plot,Mcap_985_plot,Mcap_964_plot,Mcap_985_plot,Mcap_959_p
 PROFILES
 Subset by colony PROFILE, data setup
 ```{r}
-
+ 
 library("RColorBrewer")
 getPalette = colorRampPalette(brewer.pal(8, "Dark2"))
 
@@ -401,7 +401,7 @@ Mcap_976_Pro <- subset_samples(coral2.prune, TagID =="976") #Subset by colony
 Mcap_985_Pro <- subset_samples(coral2.prune, TagID =="985") #Subset by colony 
 Mcap_964_Pro <- subset_samples(coral2.prune, TagID =="964") #Subset by colony 
 Mcap_959_Pro <- subset_samples(coral2.prune, TagID =="959") #Subset by colony 
-Mcap_980c <- subset_samples(coral2.prune, TagID =="980") #Subset by colony 
+Mcap_980_Pro <- subset_samples(coral2.prune, TagID =="980") #Subset by colony 
   
 ```
 Plots PRO
@@ -412,7 +412,7 @@ Plots PRO
 
 
 Mcap_970_PRO_plot<-plot_bar(Mcap_970_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_970_Pro")+
-   theme(legend.position="none")+scale_fill_manual(values= speciesPalette);Mcap_970_PRO_plot
+   theme(legend.position="none");Mcap_970_PRO_plot
 Mcap_965_PRO_plot<-plot_bar(Mcap_965_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_965_Pro")+
    theme(legend.position="none");Mcap_965_PRO_plot
 Mcap_969_PRO_plot<-plot_bar(Mcap_969_Pro, "Sample_name", fill="its2_type_profile", title="Mcap_969_Pro")+
@@ -479,11 +479,13 @@ Mcap_985_PRO_plot,Mcap_964_PRO_plot,Mcap_985_PRO_plot,Mcap_964_PRO_plot,Mcap_985
 
 ```
 Plots CLADE
-```{r}
+```{r} 
 
 #scale_color_manual(values=speciesPalette)
 #scale_fill_manual(values= speciesPalette)
- 
+ Mcap_970_clade_plot<-plot_bar(Mcap_970_Pro, "Sample_name", fill="clade", title="Mcap_970_clade");Mcap_970_clade_plot
+
+
 Mcap_970_clade_plot<-plot_bar(Mcap_970_Pro, "Sample_name", fill="clade", title="Mcap_970_clade")+
    theme(legend.position="none");Mcap_970_clade_plot
 Mcap_965_clade_plot<-plot_bar(Mcap_965_Pro, "Sample_name", fill="clade", title="Mcap_965_clade")+
@@ -556,7 +558,9 @@ Mcap_985_clade_plot,Mcap_964_clade_plot,Mcap_985_clade_plot,Mcap_964_clade_plot,
 big fig
 ```{r}
 theme_set(theme_classic())
+library(ggpubr)
 
+library(ggarrange)
 
 
 figureMCL1 <- ggarrange(Mcap_970_clade_plot, Mcap_965_clade_plot, Mcap_969_clade_plot,Mcap_972_clade_plot, 
@@ -593,3 +597,18 @@ figureMCL6 <- ggarrange(Mcap_985_clade_plot, Mcap_964_clade_plot, Mcap_959_clade
 
 
 ```
+
+
+Ordination
+```{r}
+plot_ordination(coralDIV2.prune, ordinate(coralDIV2.prune, "MDS"), color = "TagID") + geom_point(size = 5)
+plot_heatmap(coralDIV2.prune, "NMDS", "bray", "TagID", "DIV")
+
+GP.ord <- ordinate(coralDIV2.prune, "NMDS", "bray")
+p1 = plot_ordination(coralDIV2.prune, GP.ord, type="samples", color="TagID", title="taxa")
+print(p1)
+
+p2 = plot_ordination(coralDIV2.prune, GP.ord, type="samples", color="TagID", shape="TagID") 
+p2 + geom_polygon(aes(fill=SampleType)) + geom_point(size=5) + ggtitle("samples")
+```
+
