@@ -16,7 +16,7 @@ library("writexl")
 
 ```
 Reading in data with Ross code, this is relA. 
-# Relative Abundance
+# Relative Abundance 
 Read in coral ITS2 profiles: "coral"
 ```{r} 
 #add metadata to symportal submission data
@@ -55,12 +55,12 @@ rownames(otu1) <- otu0$sample_name
 otu <- otu_table(otu1, taxa_are_rows = FALSE)
 
 coral <- phyloseq(otu, tax, sam)
-
+ 
 
 
 ```
 Read in coral post-QC sequence variants: "coralDIV"
-```{r}
+```{r} 
 sam0 <- read_xlsx("MCL_Symp_Metadata.xlsx")
 rownames(sam0) <- sam0$sample_name
 sam <- sample_data(data.frame(sam0))
@@ -93,7 +93,7 @@ so this is the same as above just by absolute
 
 Profiles
 ```{r}
-
+ 
 sam0 <- readxl::read_xlsx("MCL_Symp_Metadata.xlsx") #Symportal metadata combined from above
 sam1 <- as.matrix(sam0[, -1])
 rownames(sam1) <- sam0$sample_name
@@ -152,7 +152,7 @@ save(coral_absolutePro, coral_Absolute_DIV, file = "data/Absolute_coral_phyloseq
 ```
 
 #Analysis (RCunning Script) REL Abundance -  
-```{r}
+```{r} 
 library(tidyverse)
 library(janitor)
 library(phyloseq)  # source('http://bioconductor.org/biocLite.R'); biocLite('phyloseq')
@@ -280,7 +280,7 @@ Mcap_980 <- subset_samples(coralDIV2.prune, TagID =="980") #Subset by colony
   
 ```
 Plots DIVS
-```{r}
+```{r} 
 
 #try to transform samp counts
 
@@ -358,7 +358,7 @@ Mcap_985_plot,Mcap_964_plot,Mcap_985_plot,Mcap_964_plot,Mcap_985_plot,Mcap_959_p
 
 PROFILES
 Subset by colony PROFILE, data setup
-```{r}
+```{r} 
  
 library("RColorBrewer")
 getPalette = colorRampPalette(brewer.pal(8, "Dark2"))
@@ -556,7 +556,7 @@ Mcap_985_clade_plot,Mcap_964_clade_plot,Mcap_985_clade_plot,Mcap_964_clade_plot,
 
 
 big fig
-```{r}
+```{r} 
 theme_set(theme_classic())
 library(ggpubr)
 
@@ -599,7 +599,7 @@ figureMCL6 <- ggarrange(Mcap_985_clade_plot, Mcap_964_clade_plot, Mcap_959_clade
 ```
 
 
-Ordination
+Ordination OLD
 ```{r}
 plot_ordination(coralDIV2.prune, ordinate(coralDIV2.prune, "MDS"), color = "TagID") + geom_point(size = 5)
 plot_heatmap(coralDIV2.prune, "NMDS", "bray", "TagID", "DIV")
@@ -611,4 +611,479 @@ print(p1)
 p2 = plot_ordination(coralDIV2.prune, GP.ord, type="samples", color="TagID", shape="TagID") 
 p2 + geom_polygon(aes(fill=SampleType)) + geom_point(size=5) + ggtitle("samples")
 ```
+
+
+# PERMANOVA coralDIV2.prune
+```{r}            
+# Sp.colors <- c("Montipora_capitata"= "#D43F3AFF","Porites_compressa"="#EEA236FF","Pavona_varians"="#5CB85CFF","Pocillopora_acuta"="#46B8DAFF", "High"="darkRed","Ambient"="navyBlue")
+
+coralDIV2.prune_stats<- coralDIV2.prune #make a copy
+otu_table(coralDIV2.prune_stats)[1:5, 1:5] #check rela worked
+
+#bray curtis presence-absense and abundance
+ 
+  coralDIV2.prune_stats = prune_taxa(taxa_sums(coralDIV2.prune_stats) > 0, coralDIV2.prune_stats) #this removes any OTU with 0s
+
+#bray curtis presence-absense and abundance
+
+#all speices
+set.seed(300)
+
+#make bray curtis data matrix
+bc.all <- phyloseq::distance(coralDIV2.prune_stats, method = "bray")
+  samp.df <- as(sample_data(coralDIV2.prune_stats), "data.frame") #sample df
+  
+  samp.df$TagID<-as.factor(samp.df$TagID)
+    samp.df$Land_Ocean<-as.factor(samp.df$Land_Ocean)
+    samp.df$SampLoc<-as.factor(samp.df$SampLoc)
+
+  
+#adonis test
+adonis(bc.all ~ TagID*SampLoc, data = samp.df) #all sig
+    
+
+# Homogeneity of dispersion test
+beta.colony <- betadisper(bc.all, samp.df$TagID)
+perm<-permutest(beta.colony, pairwise = T) 
+(bc.all.HSD <- TukeyHSD(beta.colony)) #do you need?
+plot(bc.all.HSD)
+
+
+#Ordination NMDS for all species
+set.seed(30)
+ord.DIV_bc.all <- ordinate(coralDIV2.prune_stats, "NMDS", "bray", trymax = 300) 
+stressplot(ord.DIV_bc.all)
+ord.DIV_bc.all <- as.data.frame(cbind(vegan::scores(ord.DIV_bc.all, display="sites"))) #make df
+ord.DIV_bc.all$TagID <- samp.df$TagID
+ord.DIV_bc.all$SampLoc <- samp.df$SampLoc
+
+ggplot(ord.DIV_bc.all, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = TagID), size = 4,show.legend=F) +
+  #scale_color_manual(values=Sp.colors)+
+  # geom_text(label = rownames(Clade), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = TagID), linetype = 2,show.legend=F) +
+  ggtitle("NMDS its2 Bray Curtis ") +
+  theme_classic()
+#ggsave("bc_all.pdf")
+
+ggplot(ord.DIV_bc.all, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = SampLoc), size = 4,show.legend=T) +
+  #scale_color_manual(values=Sp.colors)+
+  # geom_text(label = rownames(Clade), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = SampLoc), linetype = 2,show.legend=T) +
+  ggtitle("NMDS its2 Bray Curtis ") +
+  theme_classic()
+#ggsave("bc_all.pdf")
+
+
+
+#bray curtis presence-absense and abundance
+
+#all speices
+set.seed(30)
+
+#make bray curtis data matrix
+bc.all <- phyloseq::distance(DIV_RelA_stats, method = "bray")
+  samp.df <- as(sample_data(DIV_RelA_stats), "data.frame") #sample df
+#adonis test
+adonis(bc.all ~ Species*Time.Point*Treatment, data = samp.df)
+    
+
+# Homogeneity of dispersion test
+betaAll <- betadisper(bc.all, samp.df$Species)
+permutest(betaAll, pairwise = T) 
+(bc.all.HSD <- TukeyHSD(betaAll)) #do you need?
+plot(bc.all.HSD)
+
+
+#Ordination NMDS for all species
+set.seed(30)
+ord.DIV_RelA_stats <- ordinate(DIV_RelA_stats, "NMDS", "bray", trymax = 100) 
+stressplot(ord.DIV_RelA_stats)
+scores.ord.DIV_RelA_stats <- as.data.frame(cbind(vegan::scores(ord.DIV_RelA_stats, display="sites"))) #make df
+scores.ord.DIV_RelA_stats$Treatment <- samp.df$Treatment
+scores.ord.DIV_RelA_stats$Species <- samp.df$Species
+scores.ord.DIV_RelA_stats$Clade <- samp.df$Clade
+scores.ord.DIV_RelA_stats$Time.Point <- samp.df$Time.Point
+
+ggplot(scores.ord.DIV_RelA_stats, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Species), size = 4) +
+  #scale_color_manual(values=Mcap.Parent.colors)+
+  #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  #stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = Treatment), linetype = 2) +
+  ggtitle("NMDS its2 Bray Curtis") +
+  theme_classic()
+#ggsave("bc_all.pdf")
+
+ggplot(scores.ord.DIV_RelA_stats, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Clade, shape=Species), size = 4) +
+  #scale_color_manual(values=Mcap.Parent.colors)+
+  #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  #stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = Treatment), linetype = 2) +
+  ggtitle("NMDS its2 Bray Curtis") +
+  theme_classic()
+#ggsave("bc_all.pdf")
+
+
+#BY COLONY
+
+#945 ####
+DIV_RelA_stats_945<-subset_samples(coralDIV2.prune_stats, TagID=="945")
+  DIV_RelA_stats_945 = prune_taxa(taxa_sums(DIV_RelA_stats_945) > 0, DIV_RelA_stats_945) #this removes any OTU with 0s
+  samp.df_945 <- as(sample_data(DIV_RelA_stats_945), "data.frame") #sample df
+
+#all speices
+set.seed(30)
+
+#make bray curtis data matrix
+bc.945 <- phyloseq::distance(coralDIV2.prune_stats, method = "bray")
+  samp.df_945 <- as(sample_data(coralDIV2.prune_stats), "data.frame") #sample df
+#adonis test
+adonis(bc.945 ~ SampLoc, data = samp.df_945)
+    
+# Homogeneity of dispersion test
+betaAll <- betadisper(bc.all, samp.df$Species)
+permutest(betaAll, pairwise = T) 
+(bc.all.HSD <- TukeyHSD(betaAll)) #do you need?
+plot(bc.all.HSD)
+
+#Ordination NMDS for all species
+set.seed(30)
+ord.DIV_RelA_stats.945 <- ordinate(DIV_RelA_stats_945, "NMDS", "bray", trymax = 100) 
+stressplot(ord.DIV_RelA_stats.945)
+ord.DIV_RelA_stats.945 <- as.data.frame(cbind(vegan::scores(ord.DIV_RelA_stats.945, display="sites"))) #make df
+ord.DIV_RelA_stats.945$SampLoc <- samp.df_945$SampLoc
+ord.DIV_RelA_stats.945$sample_name <- samp.df_945$sample_name
+
+ggplot(ord.DIV_RelA_stats.945, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = SampLoc, shape=SampLoc), size = 4) +
+  #scale_color_manual(values=Mcap.Parent.colors)+
+  #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  ggtitle("NMDS its2 Bray Curtis 945") +
+  theme_classic() 
+#ggsave("bc_all.pdf")
+
+#960 ####
+DIV_RelA_stats_960<-subset_samples(coralDIV2.prune_stats, TagID=="960")
+  DIV_RelA_stats_960 = prune_taxa(taxa_sums(DIV_RelA_stats_960) > 0, DIV_RelA_stats_960) #this removes any OTU with 0s
+  samp.df_960 <- as(sample_data(DIV_RelA_stats_960), "data.frame") #sample df
+
+#all speices
+set.seed(30)
+
+#make bray curtis data matrix
+bc.960 <- phyloseq::distance(coralDIV2.prune_stats, method = "bray")
+  samp.df_960 <- as(sample_data(coralDIV2.prune_stats), "data.frame") #sample df
+#adonis test
+adonis(bc.960 ~ SampLoc, data = samp.df_960)
+    
+# Homogeneity of dispersion test
+# betaAll <- betadisper(bc.960, samp.df$Species)
+# permutest(betaAll, pairwise = T) 
+# (bc.all.HSD <- TukeyHSD(betaAll)) #do you need?
+# plot(bc.all.HSD)
+
+#Ordination NMDS for all species
+set.seed(30)
+ord.DIV_RelA_stats.960 <- ordinate(DIV_RelA_stats_960, "NMDS", "bray", trymax = 100) 
+stressplot(ord.DIV_RelA_stats.960)
+ord.DIV_RelA_stats.960 <- as.data.frame(cbind(vegan::scores(ord.DIV_RelA_stats.960, display="sites"))) #make df
+ord.DIV_RelA_stats.960$SampLoc <- samp.df_960$SampLoc
+ord.DIV_RelA_stats.960$sample_name <- samp.df_960$sample_name
+
+ggplot(ord.DIV_RelA_stats.960, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = SampLoc, shape=SampLoc), size = 4) +
+  #scale_color_manual(values=Mcap.Parent.colors)+
+  #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  ggtitle("NMDS its2 Bray Curtis 960") +
+  theme_classic() 
+#ggsave("bc_all.pdf")
+
+
+#970 ####
+DIV_RelA_stats_970<-subset_samples(coralDIV2.prune_stats, TagID=="970")
+  DIV_RelA_stats_970 = prune_taxa(taxa_sums(DIV_RelA_stats_970) > 0, DIV_RelA_stats_970) #this removes any OTU with 0s
+  samp.df_970 <- as(sample_data(DIV_RelA_stats_970), "data.frame") #sample df
+
+#all speices
+set.seed(30)
+
+#make bray curtis data matrix
+bc.970 <- phyloseq::distance(coralDIV2.prune_stats, method = "bray")
+  samp.df_970 <- as(sample_data(coralDIV2.prune_stats), "data.frame") #sample df
+#adonis test
+adonis(bc.970 ~ SampLoc, data = samp.df_970)
+    
+# Homogeneity of dispersion test
+# betaAll <- betadisper(bc.all, samp.df$Species)
+# permutest(betaAll, pairwise = T) 
+# (bc.all.HSD <- TukeyHSD(betaAll)) #do you need?
+# plot(bc.all.HSD)
+
+#Ordination NMDS for all species
+set.seed(30)
+ord.DIV_RelA_stats.970 <- ordinate(DIV_RelA_stats_970, "NMDS", "bray", trymax = 100) 
+stressplot(ord.DIV_RelA_stats.970)
+ord.DIV_RelA_stats.970 <- as.data.frame(cbind(vegan::scores(ord.DIV_RelA_stats.970, display="sites"))) #make df
+ord.DIV_RelA_stats.970$SampLoc <- samp.df_970$SampLoc
+ord.DIV_RelA_stats.970$sample_name <- samp.df_970$sample_name
+ord.DIV_RelA_stats.970$Sub.loc <- samp.df_970$Sub.loc
+ord.DIV_RelA_stats.970$Code<-paste(ord.DIV_RelA_stats.970$SampLoc,ord.DIV_RelA_stats.970$Sub.loc)
+
+ggplot(ord.DIV_RelA_stats.970, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Code, shape=Code), size = 4) +
+  #scale_color_manual(values=Mcap.Parent.colors)+
+  #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  ggtitle("NMDS its2 Bray Curtis 970") +
+  theme_classic() 
+#ggsave("bc_all.pdf")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#for defense
+ggplot(scores.ord.DIV_RelA_statsT1, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Species, shape=Treatment), size = 4) +
+  #scale_color_manual(values=Mcap.Parent.colors)+
+  #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  stat_ellipse(aes(color=Species, fill=4, alpha=0.25)) +
+scale_linetype_manual(values=c(1,2,1,2,1,2,1,2))+
+  ggtitle("NMDS its2 Bray Curtis") +
+  theme_classic()
+
+ggplot(scores.ord.DIV_RelA_statsT1, aes(x = NMDS1, y = NMDS2, color = Species, linetype=Treatment)) +
+  geom_point(aes(shape=Treatment), size=4) +
+  stat_ellipse(geom = "polygon",
+               aes(fill = Code3), 
+               alpha = 0.25)+
+    theme_classic()
+
+scores.ord.DIV_RelA_statsT1$Code4<-paste(scores.ord.DIV_RelA_statsT1$Species, scores.ord.DIV_RelA_statsT1$Clade, scores.ord.DIV_RelA_statsT1$Treatment)
+
+ p<-ggplot(scores.ord.DIV_RelA_statsT1, aes(x = NMDS1, y = NMDS2, color = Species, linetype=Treatment)) +
+  geom_point(aes(shape=Treatment), size=4) +
+  stat_ellipse(geom = "polygon",
+               aes(fill = Code4), 
+               alpha = 0.25)+
+    theme_classic()
+p+facet_wrap(~Species)
+
+#TF only
+
+DIV_RelA_stats.TF<-subset_samples(DIV_RelA_stats, Time.Point=="TF")
+  DIV_RelA_stats.TF = prune_taxa(taxa_sums(DIV_RelA_stats.TF) > 0, DIV_RelA_stats.TF) #this removes any OTU with 0s
+
+#bray curtis presence-absense and abundance
+
+#all speices
+set.seed(30)
+
+#make bray curtis data matrix
+bc.all <- phyloseq::distance(DIV_RelA_stats.TF, method = "bray")
+  samp.df <- as(sample_data(DIV_RelA_stats.TF), "data.frame") #sample df
+#adonis test
+adonis(bc.all ~ Species*Treatment, data = samp.df)
+    
+
+# Homogeneity of dispersion test
+betaAll <- betadisper(bc.all, samp.df$Species)
+permutest(betaAll, pairwise = T) 
+(bc.all.HSD <- TukeyHSD(betaAll)) #do you need?
+plot(bc.all.HSD)
+
+
+#Ordination NMDS for all species
+set.seed(30)
+ord.DIV_RelA_stats.TF <- ordinate(DIV_RelA_stats.TF, "NMDS", "bray", trymax = 100) 
+stressplot(ord.DIV_RelA_stats.TF)
+scores.ord.DIV_RelA_stats <- as.data.frame(cbind(vegan::scores(ord.DIV_RelA_stats.TF, display="sites"))) #make df
+scores.ord.DIV_RelA_stats$Treatment <- samp.df$Treatment
+scores.ord.DIV_RelA_stats$Species <- samp.df$Species
+scores.ord.DIV_RelA_stats$Clade <- samp.df$Clade
+scores.ord.DIV_RelA_stats$Code3<-paste(scores.ord.DIV_RelA_stats$Species,scores.ord.DIV_RelA_stats$Treatment)
+
+ggplot(scores.ord.DIV_RelA_stats, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Species, shape=Treatment), size = 4) +
+  #scale_color_manual(values=Mcap.Parent.colors)+
+  #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  stat_ellipse(aes(x = NMDS1, y = NMDS2, color=Species, group=Code3,lty = Code3)) +
+scale_linetype_manual(values=c(1,2,1,2,1,2,1,2))+
+  ggtitle("NMDS its2 Bray Curtis TF") +
+  theme_classic()
+#ggsave("bc_all.pdf")
+
+#for defense
+
+ggplot(scores.ord.DIV_RelA_stats, aes(x = NMDS1, y = NMDS2, color = Species, linetype=Treatment)) +
+  geom_point(aes(shape=Treatment), size=4) +
+  stat_ellipse(geom = "polygon",
+               aes(fill = Code3), 
+               alpha = 0.25)+
+    theme_classic()
+
+scores.ord.DIV_RelA_stats$Code4<-paste(scores.ord.DIV_RelA_stats$Species, scores.ord.DIV_RelA_stats$Clade, scores.ord.DIV_RelA_stats$Treatment)
+
+ p<-ggplot(scores.ord.DIV_RelA_stats, aes(x = NMDS1, y = NMDS2, color = Species, linetype=Treatment)) +
+  geom_point(aes(shape=Treatment), size=4) +
+  stat_ellipse(geom = "polygon",
+               aes(fill = Code4), 
+               alpha = 0.25)+
+    theme_classic()
+p+facet_wrap(~Species)
+
+
+#966 ####
+DIV_RelA_stats_966<-subset_samples(coralDIV2.prune_stats, TagID=="966")
+  DIV_RelA_stats_966 = prune_taxa(taxa_sums(DIV_RelA_stats_966) > 0, DIV_RelA_stats_966) #this removes any OTU with 0s
+
+#all speices
+set.seed(30)
+
+#make bray curtis data matrix
+bc.966 <- phyloseq::distance(coralDIV2.prune_stats, method = "bray")
+  samp.df_966 <- as(sample_data(coralDIV2.prune_stats), "data.frame") #sample df
+#adonis test
+adonis(bc.966 ~ SampLoc, data = samp.df_966)
+    
+#Ordination NMDS for all species
+set.seed(30)
+ord.DIV_RelA_stats.966 <- ordinate(DIV_RelA_stats_966, "NMDS", "bray", trymax = 100) 
+stressplot(ord.DIV_RelA_stats.966)
+  samp.df_966 <- as(sample_data(DIV_RelA_stats_966), "data.frame") #sample df
+ord.DIV_RelA_stats.966 <- as.data.frame(cbind(vegan::scores(ord.DIV_RelA_stats.966, display="sites"))) #make df
+ord.DIV_RelA_stats.966$SampLoc <- samp.df_966$SampLoc
+ord.DIV_RelA_stats.966$sample_name <- samp.df_966$sample_name
+
+ggplot(ord.DIV_RelA_stats.966, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = SampLoc, shape=SampLoc), size = 4) +
+  #scale_color_manual(values=Mcap.Parent.colors)+
+  #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  ggtitle("NMDS its2 Bray Curtis 966") +
+  theme_classic() 
+#ggsave("bc_all.pdf")
+
+#981 ####
+DIV_RelA_stats_981<-subset_samples(coralDIV2.prune_stats, TagID=="981")
+  DIV_RelA_stats_981 = prune_taxa(taxa_sums(DIV_RelA_stats_981) > 0, DIV_RelA_stats_981) #this removes any OTU with 0s
+
+#all speices
+set.seed(30)
+
+#make bray curtis data matrix
+bc.981 <- phyloseq::distance(coralDIV2.prune_stats, method = "bray")
+  samp.df_981 <- as(sample_data(coralDIV2.prune_stats), "data.frame") #sample df
+#adonis test
+adonis(bc.981 ~ SampLoc, data = samp.df_981)
+
+
+#Ordination NMDS for all species
+set.seed(30)
+ord.DIV_RelA_stats.981 <- ordinate(DIV_RelA_stats_981, "NMDS", "bray", trymax = 100) 
+stressplot(ord.DIV_RelA_stats.981)
+  samp.df_981 <- as(sample_data(DIV_RelA_stats_981), "data.frame") #sample df
+
+ord.DIV_RelA_stats.981 <- as.data.frame(cbind(vegan::scores(ord.DIV_RelA_stats.981, display="sites"))) #make df
+ord.DIV_RelA_stats.981$SampLoc <- samp.df_981$SampLoc
+ord.DIV_RelA_stats.981$sample_name <- samp.df_981$sample_name
+ord.DIV_RelA_stats.981$Sub.loc <- samp.df_981$Sub.loc
+ord.DIV_RelA_stats.981$Code<-paste(ord.DIV_RelA_stats.981$SampLoc,ord.DIV_RelA_stats.981$Sub.loc)
+
+ggplot(ord.DIV_RelA_stats.981, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Code, shape=Code), size = 4) +
+  #scale_color_manual(values=Mcap.Parent.colors)+
+  #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  ggtitle("NMDS its2 Bray Curtis 981") +
+  theme_classic() 
+#ggsave("bc_all.pdf")
+
+
+#957 ####
+DIV_RelA_stats_957<-subset_samples(coralDIV2.prune_stats, TagID=="957")
+  DIV_RelA_stats_957 = prune_taxa(taxa_sums(DIV_RelA_stats_957) > 0, DIV_RelA_stats_957) #this removes any OTU with 0s
+
+#all speices
+set.seed(30)
+
+#make bray curtis data matrix
+bc.957 <- phyloseq::distance(coralDIV2.prune_stats, method = "bray")
+  samp.df_957 <- as(sample_data(coralDIV2.prune_stats), "data.frame") #sample df
+#adonis test
+adonis(bc.957 ~ SampLoc, data = samp.df_957)
+
+
+#Ordination NMDS for all species
+set.seed(30)
+ord.DIV_RelA_stats.957 <- ordinate(DIV_RelA_stats_957, "NMDS", "bray", trymax = 100) 
+stressplot(ord.DIV_RelA_stats.957)
+  samp.df_957 <- as(sample_data(DIV_RelA_stats_957), "data.frame") #sample df
+
+ord.DIV_RelA_stats.957 <- as.data.frame(cbind(vegan::scores(ord.DIV_RelA_stats.957, display="sites"))) #make df
+ord.DIV_RelA_stats.957$SampLoc <- samp.df_957$SampLoc
+ord.DIV_RelA_stats.957$sample_name <- samp.df_957$sample_name
+ord.DIV_RelA_stats.957$Sub.loc <- samp.df_957$Sub.loc
+ord.DIV_RelA_stats.957$Code<-paste(ord.DIV_RelA_stats.957$SampLoc,ord.DIV_RelA_stats.957$Sub.loc)
+
+ggplot(ord.DIV_RelA_stats.957, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Code, shape=Code), size = 4) +
+  #scale_color_manual(values=Mcap.Parent.colors)+
+  #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  ggtitle("NMDS its2 Bray Curtis 957") +
+  theme_classic() 
+#ggsave("bc_all.pdf")
+
+
+
+
+
+#985 ####
+DIV_RelA_stats_985<-subset_samples(coralDIV2.prune_stats, TagID=="985")
+  DIV_RelA_stats_985 = prune_taxa(taxa_sums(DIV_RelA_stats_985) > 0, DIV_RelA_stats_985) #this removes any OTU with 0s
+
+#all speices
+set.seed(30)
+
+#make bray curtis data matrix
+bc.985 <- phyloseq::distance(coralDIV2.prune_stats, method = "bray")
+  samp.df_985 <- as(sample_data(coralDIV2.prune_stats), "data.frame") #sample df
+#adonis test
+adonis(bc.985 ~ SampLoc, data = samp.df_985)
+
+
+#Ordination NMDS for all species
+set.seed(30)
+ord.DIV_RelA_stats.985 <- ordinate(DIV_RelA_stats_985, "NMDS", "bray", trymax = 100) 
+stressplot(ord.DIV_RelA_stats.985)
+  samp.df_985 <- as(sample_data(DIV_RelA_stats_985), "data.frame") #sample df
+
+ord.DIV_RelA_stats.985 <- as.data.frame(cbind(vegan::scores(ord.DIV_RelA_stats.985, display="sites"))) #make df
+ord.DIV_RelA_stats.985$SampLoc <- samp.df_985$SampLoc
+ord.DIV_RelA_stats.985$sample_name <- samp.df_985$sample_name
+ord.DIV_RelA_stats.985$Sub.loc <- samp.df_985$Sub.loc
+ord.DIV_RelA_stats.985$Code<-paste(ord.DIV_RelA_stats.985$SampLoc,ord.DIV_RelA_stats.985$Sub.loc)
+
+ggplot(ord.DIV_RelA_stats.985, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Code), size = 4) +
+  #scale_color_manual(values=Mcap.Parent.colors)+
+  #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  ggtitle("NMDS its2 Bray Curtis 985") +
+  theme_classic() 
+#ggsave("bc_all.pdf")
+
+
+```
+
 
