@@ -6,7 +6,7 @@ editor_options:
 ---
 This is from the Microbial Landscape experiment (summer). ITS2 data from Symportal. 
 ```{r}
-rm(list=ls())
+#rm(list=ls())
 
 library(tidyverse)
 library(readxl)
@@ -18,7 +18,7 @@ library("writexl")
 Reading in data with Ross code, this is relA. 
 # Relative Abundance 
 Read in coral ITS2 profiles: "coral"
-```{r} 
+```{r}  
 #add metadata to symportal submission data
 Symp_sub<-readxl::read_xlsx("MCL_SymPortal_submission_input.xlsx", skip = 1)
 Metadata<-read.csv("MCL19_metadata_20200402.csv")
@@ -60,7 +60,7 @@ coral <- phyloseq(otu, tax, sam)
 
 ```
 Read in coral post-QC sequence variants: "coralDIV"
-```{r} 
+```{r}  
 sam0 <- read_xlsx("MCL_Symp_Metadata.xlsx")
 rownames(sam0) <- sam0$sample_name
 sam <- sample_data(data.frame(sam0))
@@ -85,7 +85,7 @@ otu <- otu_table(otu1, taxa_are_rows = FALSE)
 coralDIV <- phyloseq(otu, tax, sam)
 ```
 
-```{r}
+```{r} 
 save(coral, coralDIV, file = "data/coral_phyloseq.RData")
 ```
 #Reading in data by ABSOLUTE abundances
@@ -124,7 +124,7 @@ otu <- otu_table(otu1, taxa_are_rows = FALSE)
 coral_absolutePro <- phyloseq(otu, tax, sam)
 ```
 DIVs absolute
-```{r}
+```{r} 
 
 taxnames <- read_tsv(
   file  = "20201214_matsuda_MCL/post_med_seqs/133_20201216_DBV_20201216T011417.seqs.absolute.abund_only.txt",
@@ -167,7 +167,7 @@ load("data/coral_phyloseq.RData")
 ```
 Hey what does this do?
 ```{r}
-coral2 <- coral %>%
+coral2 <- coral %>% 
   subset_samples(!is.na(host_species))
 coralDIV2 <- coralDIV %>% 
   subset_samples(!is.na(host_species))
@@ -180,7 +180,7 @@ coralDIV2 <- transform_sample_counts(coralDIV2, function(x) 100 * x/sum(x))
 ```
 
 Monster all data vis (not helpful)
-```{r, fig.width = 10, fig.height = 40}
+```{r, fig.width = 10, fig.height = 40} 
 # Plot ITS2 profiles for each coral sample by species and site
 plot_bar(coral, fill = "its2_type_profile") +
   facet_wrap(~ host_genus + host_species, ncol = 6, scales = "free") +
@@ -203,7 +203,7 @@ ggplot(divclades, aes(x = Sample, y = Abundance, fill = clade)) +
 ```
 
 Data wrangle: remove samples with under 5k 
-```{r}
+```{r} 
 #lets see what is up with the low samps
 
 LowSamps<-readxl::read_xlsx("20201214_matsuda_MCL/post_med_seqs/133_20201216_DBV_20201216T011417.seqs.absolute.meta_only.xlsx")
@@ -213,7 +213,7 @@ hist(LowSamps$post_taxa_id_absolute_symbiodiniaceae_seqs_log, breaks=20)
 
 ```
 Look at the low samples: no patterns
-```{r}
+```{r} 
 sample_names(coralDIV2) #pring sample names
 
 #look at NTCs
@@ -237,7 +237,7 @@ LOWtest <- subset_samples(coralDIV2, sample_name =="S6"| sample_name =="G7"|samp
  
 Remove low samples from the datasets
 ```{r} 
-#DIVs
+#DIVs 
 to_remove <- c("NTC", "NTC2", "S6", "G7","Q11","G8", "B13","B6") #make list of samples to remove with less than 2000 seqs
 coralDIV2.prune <- prune_samples(!(sample_names(coralDIV2) %in% to_remove), coralDIV2) #remove
 #sample_names(coralDIV2.prune) # check to see they are removed
@@ -250,8 +250,10 @@ coral2.prune <- prune_samples(!(sample_names(coral2) %in% to_remove), coral2) #r
 ```
 
 Subset by colony DIV, data setup
-```{r}
+```{r} 
 sample_variables(coralDIV2.prune) #what are the variables
+
+
 
 Mcap_970 <- subset_samples(coralDIV2.prune, TagID =="970") #Subset by colony  
 Mcap_965 <- subset_samples(coralDIV2.prune, TagID =="965") #Subset by colony  
@@ -280,7 +282,7 @@ Mcap_980 <- subset_samples(coralDIV2.prune, TagID =="980") #Subset by colony
   
 ```
 Plots DIVS
-```{r} 
+```{r}  
 
 #try to transform samp counts
 
@@ -339,6 +341,13 @@ Mcap_959_plot<-plot_bar(Mcap_959, "Sample_name", fill="DIV", title="Mcap_959")+
 Mcap_980_plot<-plot_bar(Mcap_980, "Sample_name", fill="DIV", title="Mcap_980")+
    theme(legend.position="none");Mcap_980_plot
 
+#name of sample location on C/Ds
+Mcap_970_plotB<-plot_bar(Mcap_970, "LocSamp", fill="DIV", title="Mcap_970")+
+   theme(legend.position="none");Mcap_970_plotB
+
+
+
+
 
 Mcap_DIV_plot1 <- ggarrange(Mcap_970_plot, Mcap_965_plot,Mcap_969_plot,Mcap_972_plot, Mcap_971_plot,Mcap_968_plot,Mcap_966_plot,Mcap_978_plot,
                     #labels = c("A", "B", "C","D","E","F"),
@@ -358,7 +367,7 @@ Mcap_985_plot,Mcap_964_plot,Mcap_985_plot,Mcap_964_plot,Mcap_985_plot,Mcap_959_p
 
 PROFILES
 Subset by colony PROFILE, data setup
-```{r} 
+```{r}  
  
 library("RColorBrewer")
 getPalette = colorRampPalette(brewer.pal(8, "Dark2"))
@@ -405,7 +414,7 @@ Mcap_980_Pro <- subset_samples(coral2.prune, TagID =="980") #Subset by colony
   
 ```
 Plots PRO
-```{r}
+```{r} 
 #for the legend
  plot_bar(Mcap_970_Pro,fill = "its2_type_profile")+
       geom_bar(aes(color=its2_type_profile, fill=its2_type_profile), stat="identity", position="stack")
@@ -479,63 +488,145 @@ Mcap_985_PRO_plot,Mcap_964_PRO_plot,Mcap_985_PRO_plot,Mcap_964_PRO_plot,Mcap_985
 
 ```
 Plots CLADE
-```{r} 
+```{r}   
 
 #scale_color_manual(values=speciesPalette)
 #scale_fill_manual(values= speciesPalette)
- Mcap_970_clade_plot<-plot_bar(Mcap_970_Pro, "Sample_name", fill="clade", title="Mcap_970_clade");Mcap_970_clade_plot
 
 
-Mcap_970_clade_plot<-plot_bar(Mcap_970_Pro, "Sample_name", fill="clade", title="Mcap_970_clade")+
-   theme(legend.position="none");Mcap_970_clade_plot
-Mcap_965_clade_plot<-plot_bar(Mcap_965_Pro, "Sample_name", fill="clade", title="Mcap_965_clade")+
-   theme(legend.position="none");Mcap_965_clade_plot
-Mcap_969_clade_plot<-plot_bar(Mcap_969_Pro, "Sample_name", fill="clade", title="Mcap_969_clade")+
-   theme(legend.position="none");Mcap_969_clade_plot
-Mcap_972_clade_plot<-plot_bar(Mcap_972_Pro, "Sample_name", fill="clade", title="Mcap_972_clade")+
-   theme(legend.position="none");Mcap_972_clade_plot
-Mcap_971_clade_plot<-plot_bar(Mcap_971_Pro, "Sample_name", fill="clade", title="Mcap_971_clade")+
-   theme(legend.position="none");Mcap_971_clade_plot
-Mcap_968_clade_plot<-plot_bar(Mcap_968_Pro, "Sample_name", fill="clade", title="Mcap_968_clade")+
-   theme(legend.position="none");Mcap_968_clade_plot
-Mcap_966_clade_plot<-plot_bar(Mcap_966_Pro, "Sample_name", fill="clade", title="Mcap_966_clade")+
-   theme(legend.position="none");Mcap_966_clade_plot
-Mcap_978_clade_plot<-plot_bar(Mcap_978_Pro, "Sample_name", fill="clade", title="Mcap_978_clade")+
-   theme(legend.position="none");Mcap_978_clade_plot
-Mcap_963_clade_plot<-plot_bar(Mcap_963_Pro, "Sample_name", fill="clade", title="Mcap_963_clade")+
-   theme(legend.position="none");Mcap_963_clade_plot
-Mcap_961_clade_plot<-plot_bar(Mcap_961_Pro, "Sample_name", fill="clade", title="Mcap_961_clade")+
-   theme(legend.position="none");Mcap_961_clade_plot
-Mcap_981_clade_plot<-plot_bar(Mcap_981_Pro, "Sample_name", fill="clade", title="Mcap_981_clade")+
-   theme(legend.position="none");Mcap_981_clade_plot
-Mcap_967_clade_plot<-plot_bar(Mcap_967_Pro, "Sample_name", fill="clade", title="Mcap_967_clade")+
-   theme(legend.position="none");Mcap_967_clade_plot
-Mcap_983_clade_plot<-plot_bar(Mcap_983_Pro, "Sample_name", fill="clade", title="Mcap_983_clade")+
-   theme(legend.position="none");Mcap_983_clade_plot
-Mcap_974_clade_plot<-plot_bar(Mcap_974_Pro, "Sample_name", fill="clade", title="Mcap_974_clade")+
-   theme(legend.position="none");Mcap_974_clade_plot
-Mcap_984_clade_plot<-plot_bar(Mcap_984_Pro, "Sample_name", fill="clade", title="Mcap_984_clade")+
-   theme(legend.position="none");Mcap_984_clade_plot
-Mcap_962_clade_plot<-plot_bar(Mcap_962_Pro, "Sample_name", fill="clade", title="Mcap_962_clade")+
-   theme(legend.position="none");Mcap_962_clade_plot
-Mcap_957_clade_plot<-plot_bar(Mcap_957_Pro, "Sample_name", fill="clade", title="Mcap_957_clade")+
-   theme(legend.position="none");Mcap_957_clade_plot
-Mcap_945_clade_plot<-plot_bar(Mcap_945_Pro, "Sample_name", fill="clade", title="Mcap_945_clade")+
-   theme(legend.position="none");Mcap_945_clade_plot
-Mcap_960_clade_plot<-plot_bar(Mcap_960_Pro, "Sample_name", fill="clade", title="Mcap_960_clade")+
-   theme(legend.position="none");Mcap_960_clade_plot
-Mcap_976_clade_plot<-plot_bar(Mcap_976_Pro, "Sample_name", fill="clade", title="Mcap_976_clade")+
-   theme(legend.position="none");Mcap_976_clade_plot
-Mcap_985_clade_plot<-plot_bar(Mcap_985_Pro, "Sample_name", fill="clade", title="Mcap_985_clade")+
-   theme(legend.position="none");Mcap_985_clade_plot
-Mcap_964_clade_plot<-plot_bar(Mcap_964_Pro, "Sample_name", fill="clade", title="Mcap_964_clade")+
-   theme(legend.position="none");Mcap_964_clade_plot
-Mcap_985_clade_plot<-plot_bar(Mcap_985_Pro, "Sample_name", fill="clade", title="Mcap_985_clade")+
-   theme(legend.position="none");Mcap_985_clade_plot
-Mcap_959_clade_plot<-plot_bar(Mcap_959_Pro, "Sample_name", fill="clade", title="Mcap_959_clade")+
-   theme(legend.position="none");Mcap_959_clade_plot
-Mcap_980_clade_plot<-plot_bar(Mcap_980_Pro, "Sample_name", fill="clade", title="Mcap_980_clade")+
-   theme(legend.position="none");Mcap_980_clade_plot
+ Mcap_970_clade_plot<-plot_bar(Mcap_970_Pro, "LocSamp", fill="clade", title="Mcap_970_clade");Mcap_970_clade_plot
+
+
+# pretty the axis labels with ggplot2
+library("ggplot2")
+Mcap_970_clade_plot + theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+
+
+Mcap_970_clade_plot<-plot_bar(Mcap_970_Pro, "LocSamp",fill="clade", title="Mcap_970_clade")+
+   theme(legend.position="none") + 
+  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_970_clade_plot
+
+Mcap_965_clade_plot<-plot_bar(Mcap_965_Pro, "LocSamp", fill="clade", title="Mcap_965_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_965_clade_plot
+
+Mcap_969_clade_plot<-plot_bar(Mcap_969_Pro, "LocSamp", fill="clade", title="Mcap_969_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_969_clade_plot
+
+Mcap_972_clade_plot<-plot_bar(Mcap_972_Pro, "LocSamp", fill="clade", title="Mcap_972_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_972_clade_plot
+
+Mcap_971_clade_plot<-plot_bar(Mcap_971_Pro, "LocSamp", fill="clade", title="Mcap_971_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_971_clade_plot
+
+Mcap_968_clade_plot<-plot_bar(Mcap_968_Pro, "LocSamp", fill="clade", title="Mcap_968_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_968_clade_plot
+
+Mcap_966_clade_plot<-plot_bar(Mcap_966_Pro, "LocSamp", fill="clade", title="Mcap_966_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_966_clade_plot
+
+Mcap_978_clade_plot<-plot_bar(Mcap_978_Pro, "LocSamp", fill="clade", title="Mcap_978_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_978_clade_plot
+
+Mcap_963_clade_plot<-plot_bar(Mcap_963_Pro, "LocSamp", fill="clade", title="Mcap_963_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_963_clade_plot
+
+Mcap_961_clade_plot<-plot_bar(Mcap_961_Pro, "LocSamp", fill="clade", title="Mcap_961_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_961_clade_plot
+
+Mcap_981_clade_plot<-plot_bar(Mcap_981_Pro, "LocSamp", fill="clade", title="Mcap_981_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_981_clade_plot
+
+Mcap_967_clade_plot<-plot_bar(Mcap_967_Pro, "LocSamp", fill="clade", title="Mcap_967_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_967_clade_plot
+
+Mcap_983_clade_plot<-plot_bar(Mcap_983_Pro, "LocSamp", fill="clade", title="Mcap_983_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_983_clade_plot
+
+Mcap_974_clade_plot<-plot_bar(Mcap_974_Pro, "LocSamp", fill="clade", title="Mcap_974_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_974_clade_plot
+
+Mcap_984_clade_plot<-plot_bar(Mcap_984_Pro, "LocSamp", fill="clade", title="Mcap_984_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_984_clade_plot
+
+Mcap_962_clade_plot<-plot_bar(Mcap_962_Pro, "LocSamp", fill="clade", title="Mcap_962_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_962_clade_plot
+
+Mcap_957_clade_plot<-plot_bar(Mcap_957_Pro, "LocSamp", fill="clade", title="Mcap_957_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_957_clade_plot
+
+Mcap_945_clade_plot<-plot_bar(Mcap_945_Pro, "LocSamp", fill="clade", title="Mcap_945_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_945_clade_plot
+
+Mcap_960_clade_plot<-plot_bar(Mcap_960_Pro, "LocSamp", fill="clade", title="Mcap_960_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_960_clade_plot
+
+Mcap_976_clade_plot<-plot_bar(Mcap_976_Pro, "LocSamp", fill="clade", title="Mcap_976_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_976_clade_plot
+
+Mcap_985_clade_plot<-plot_bar(Mcap_985_Pro, "LocSamp", fill="clade", title="Mcap_985_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_985_clade_plot
+
+Mcap_964_clade_plot<-plot_bar(Mcap_964_Pro, "LocSamp", fill="clade", title="Mcap_964_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_964_clade_plot
+
+Mcap_985_clade_plot<-plot_bar(Mcap_985_Pro, "LocSamp", fill="clade", title="Mcap_985_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_985_clade_plot
+
+Mcap_959_clade_plot<-plot_bar(Mcap_959_Pro, "LocSamp", fill="clade", title="Mcap_959_clade")+
+   theme(legend.position="none") +  theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_959_clade_plot
+
+Mcap_980_clade_plot<-plot_bar(Mcap_980_Pro, "LocSamp", fill="clade", title="Mcap_980_clade")+
+   theme(legend.position="none")+theme(axis.text.x = element_text(angle = 90))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"));Mcap_980_clade_plot
 
 
 Mcap_DIV_clade_plot1 <- ggarrange(Mcap_970_clade_plot, Mcap_965_clade_plot,Mcap_969_clade_plot,Mcap_972_clade_plot, Mcap_971_clade_plot,Mcap_968_clade_plot,Mcap_966_clade_plot,Mcap_978_clade_plot,
@@ -553,6 +644,46 @@ Mcap_985_clade_plot,Mcap_964_clade_plot,Mcap_985_clade_plot,Mcap_964_clade_plot,
                     ncol = 4, nrow = 3);Mcap_DIV_clade_plot3
 ```
 
+#for telomer - get %C and %D for each sample
+
+```{r}
+#do tax glom in the data to group C and D 
+
+ data.clade<- tax_glom(coral2.prune, taxrank="clade") 
+
+#coerce into df
+  # Extract abundance matrix from the phyloseq object
+  OTU1 = as(otu_table(data.clade), "matrix")
+  # transpose if necessary
+  if(taxa_are_rows(data.clade)){OTU1 <- t(OTU1)}
+  # Coerce to data.frame
+  OTUdf = as.data.frame(OTU1)
+
+  library(tidyverse)
+library(tibble)
+  
+OTUdf <- tibble::rownames_to_column(OTUdf, "sample.name")
+as_tibble(OTUdf)
+
+OTUdf<-OTUdf%>%
+  rename(C1 = `87732`) %>%
+  rename( C2 = `87257`) %>%
+  rename( D1 = `87918`) %>%
+  rename( D2 = `87537`)
+
+
+OTUdf<-
+  OTUdf %>% rowwise() %>%
+  mutate(C = sum(c(C1+C2))) %>%  #sum C
+    mutate(D = sum(c(D1+D2)))   #sum D
+        #select( c(1, 6:7))              # remove cols you don't want anymore, not working
+
+OTUdf<-OTUdf %>%
+    mutate(samp.num = as.numeric(str_extract(sample.name, "[0-9]+"))) %>%   #extract number in samp name
+      mutate(samp.let = as.character(str_extract(sample.name, "[A-Z]+")))   # extract letter in samp name
+#Next enter genotype letter combo
+
+```
 
 
 big fig
@@ -636,11 +767,11 @@ bc.all <- phyloseq::distance(coralDIV2.prune_stats, method = "bray")
   samp.df$TagID<-as.factor(samp.df$TagID)
     samp.df$Land_Ocean<-as.factor(samp.df$Land_Ocean)
     samp.df$SampLoc<-as.factor(samp.df$SampLoc)
-
+    samp.df$Location<-paste(samp.df$SampLoc, samp.df$Sub.loc) #sample location and sub location
   
 #adonis test
-adonis(bc.all ~ TagID*SampLoc, data = samp.df) #all sig
-    
+adonis(bc.all ~ TagID*Location, data = samp.df) #all sig
+    # genotype, sample location and interaction all significant. 
 
 # Homogeneity of dispersion test
 beta.colony <- betadisper(bc.all, samp.df$TagID)
@@ -651,29 +782,147 @@ plot(bc.all.HSD)
 
 #Ordination NMDS for all species
 set.seed(30)
-ord.DIV_bc.all <- ordinate(coralDIV2.prune_stats, "NMDS", "bray", trymax = 300) 
+ord.DIV_bc.all <- ordinate(coralDIV2.prune_stats, "NMDS", "bray", trymax = 300)  ### NO CONVERGENCE
 stressplot(ord.DIV_bc.all)
 ord.DIV_bc.all <- as.data.frame(cbind(vegan::scores(ord.DIV_bc.all, display="sites"))) #make df
 ord.DIV_bc.all$TagID <- samp.df$TagID
 ord.DIV_bc.all$SampLoc <- samp.df$SampLoc
+ord.DIV_bc.all$Zoox <- samp.df$Zoox
 
 ggplot(ord.DIV_bc.all, aes(x = NMDS1, y = NMDS2)) + 
-  geom_point(aes(colour = TagID), size = 4,show.legend=F) +
+  geom_point(aes(colour = TagID), size = 4,show.legend=T) +
   #scale_color_manual(values=Sp.colors)+
   # geom_text(label = rownames(Clade), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
-  stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = TagID), linetype = 2,show.legend=F) +
-  ggtitle("NMDS its2 Bray Curtis ") +
+  stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = TagID), linetype = 2,show.legend=T) +
+  ggtitle("NMDS its2 Bray Curtis genotype ") +
   theme_classic()
 #ggsave("bc_all.pdf")
 
-ggplot(ord.DIV_bc.all, aes(x = NMDS1, y = NMDS2)) + 
-  geom_point(aes(colour = SampLoc), size = 4,show.legend=T) +
+ggplot(ord.DIV_bc.all, aes(x = NMDS1, y = NMDS2, color = TagID )) +
+  geom_point(aes(colour=TagID), size=4) +
+  stat_ellipse(geom = "polygon",
+               aes(fill = TagID), 
+               alpha = 0.25)+
+    theme_classic()
+
+zoox.cols <- c("C" = "green2","CD"="darkslateblue","D"="darkorange")
+
+ggplot(ord.DIV_bc.all, aes(x = NMDS1, y = NMDS2, color = Zoox )) +
+  geom_point(aes(colour=Zoox), size=5, alpha=0.8) +
+      scale_color_manual(values=zoox.cols)+
+  # stat_ellipse(geom = "polygon",
+  #              aes(fill = Zoox), 
+  #              alpha = 0.2)+
+    theme_classic()
+
+######### Try by Cs only #### 
+coralDIV2.prune_stats_C<-subset_samples(coralDIV2.prune_stats, Zoox=="C")
+coralDIV2.prune_stats_C = prune_taxa(taxa_sums(coralDIV2.prune_stats_C) > 0, coralDIV2.prune_stats_C)
+  
+set.seed(30)
+ord.DIV_bc.C <- ordinate(coralDIV2.prune_stats_C, "NMDS", "bray", trymax = 300)  ### NO CONVERGENCE
+stressplot(ord.DIV_bc.C)
+  samp.df.C <- as(sample_data(coralDIV2.prune_stats_C), "data.frame") #sample df
+
+ord.DIV_bc.C <- as.data.frame(cbind(vegan::scores(ord.DIV_bc.C, display="sites"))) #make df
+ord.DIV_bc.C$TagID <- samp.df.C$TagID
+ord.DIV_bc.C$TagID<-as.factor(ord.DIV_bc.C$TagID)
+ord.DIV_bc.C$SampLoc <- samp.df.C$SampLoc
+ord.DIV_bc.C$Location<-samp.df.C$Sub.loc
+ord.DIV_bc.C$Code<-paste(ord.DIV_bc.C$SampLoc, ord.DIV_bc.C$Location)
+ord.DIV_bc.C$Code<-as.factor(ord.DIV_bc.C$Code)
+
+ggplot(ord.DIV_bc.C, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = TagID), size = 4,show.legend=T) +
   #scale_color_manual(values=Sp.colors)+
   # geom_text(label = rownames(Clade), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
-  stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = SampLoc), linetype = 2,show.legend=T) +
-  ggtitle("NMDS its2 Bray Curtis ") +
+  stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = TagID),show.legend=T) +
+  ggtitle("NMDS its2 C only ") +
   theme_classic()
 #ggsave("bc_all.pdf")
+
+ggplot(ord.DIV_bc.C, aes(x = NMDS1, y = NMDS2, color = Code, linetype=Code)) +
+  geom_point(aes(shape=Code), size=4) +
+  stat_ellipse(geom = "polygon",
+               aes(fill = Code), 
+               alpha = 0.25)+
+    theme_classic()
+
+ggplot(ord.DIV_bc.C, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Code), size = 4,show.legend=T) +
+  #scale_Dolor_manual(values=Sp.Dolors)+
+  # geom_text(label = rownames(Clade), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  # stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = Code),show.legend=T) +
+    geom_mark_hull(concavity = 5,expand=0,radius=0,aes(fill=Code))+
+  ggtitle("NMDS its2 C only ") +
+  theme_classic()
+#ggsave("bc_all.pdf")
+
+
+
+ggplot(ord.DIV_bc.C, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Code), size = 4,show.legend=T) +
+  #scale_Dolor_manual(values=Sp.Dolors)+
+  # geom_text(label = rownames(Clade), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  # stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = Code),show.legend=T) +
+  geom_mark_ellipse(expand = 0,aes(fill=Code))+
+  ggtitle("NMDS its2 C only ") +
+  theme_classic()
+#ggsave("bc_all.pdf")
+
+
+
+
+######### Try by Ds only #### 
+coralDIV2.prune_stats_D<-subset_samples(coralDIV2.prune_stats, Zoox=="D")
+coralDIV2.prune_stats_D = prune_taxa(taxa_sums(coralDIV2.prune_stats_D) > 0, coralDIV2.prune_stats_D)
+  
+set.seed(300)
+ord.DIV_bc.D <- ordinate(coralDIV2.prune_stats_D, "NMDS", "bray", trymax = 500)  #
+stressplot(ord.DIV_bc.D)
+  samp.df.D <- as(sample_data(coralDIV2.prune_stats_D), "data.frame") #sample df
+
+ord.DIV_bc.D <- as.data.frame(cbind(vegan::scores(ord.DIV_bc.D, display="sites"))) #make df
+ord.DIV_bc.D$TagID <- samp.df.D$TagID
+ord.DIV_bc.D$TagID<-as.factor(ord.DIV_bc.D$TagID)
+ord.DIV_bc.D$SampLoc <- samp.df.D$SampLoc
+ord.DIV_bc.D$Location<-samp.df.D$Sub.loc
+ord.DIV_bc.D$Code<-paste(ord.DIV_bc.D$SampLoc, ord.DIV_bc.D$Location)
+ord.DIV_bc.D$Code<-as.factor(ord.DIV_bc.D$Code)
+
+ggplot(ord.DIV_bc.D, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = TagID), size = 4,show.legend=T) +
+  #scale_Dolor_manual(values=Sp.Dolors)+
+  # geom_text(label = rownames(Clade), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = TagID),show.legend=T) +
+  ggtitle("NMDS its2 D only ") +
+  theme_classic()
+#ggsave("bc_all.pdf")
+
+
+library(ggalt)
+library(ggforce)
+library(concaveman)
+
+ggplot(ord.DIV_bc.D, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Code), size = 4,show.legend=T) +
+  #scale_Dolor_manual(values=Sp.Dolors)+
+  # geom_text(label = rownames(Clade), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  # stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = Code),show.legend=T) +
+    geom_mark_hull(concavity = 5,expand=0,radius=0,aes(fill=Code))+
+  ggtitle("NMDS its2 D only ") +
+  theme_classic()
+#ggsave("bc_all.pdf")
+
+
+ggplot(ord.DIV_bc.D, aes(x = NMDS1, y = NMDS2, color = Code, linetype=Code)) +
+  geom_point(aes(colour=Code), size=4) +
+  stat_ellipse(geom = "polygon",
+               aes(fill = Code), 
+               alpha = 0.25)+
+    theme_classic()
+
+
 
 
 
@@ -725,7 +974,53 @@ ggplot(scores.ord.DIV_RelA_stats, aes(x = NMDS1, y = NMDS2)) +
 #ggsave("bc_all.pdf")
 
 
-#BY COLONY
+
+######### Try by CDs only #### 
+coralDIV2.prune_stats_CD<-subset_samples(coralDIV2.prune_stats, Zoox=="CD")
+coralDIV2.prune_stats_CD = prune_taxa(taxa_sums(coralDIV2.prune_stats_CD) > 0, coralDIV2.prune_stats_CD)
+  
+set.seed(30)
+ord.DIV_bc.CD <- ordinate(coralDIV2.prune_stats_CD, "NMDS", "bray", trymax = 300)  ###  CONVERGENCE
+stressplot(ord.DIV_bc.CD)
+  samp.df.CD <- as(sample_data(coralDIV2.prune_stats_CD), "data.frame") #sample df
+
+ord.DIV_bc.CD <- as.data.frame(cbind(vegan::scores(ord.DIV_bc.CD, display="sites"))) #make df
+ord.DIV_bc.CD$TagID <- samp.df.CD$TagID
+ord.DIV_bc.CD$TagID<-as.factor(ord.DIV_bc.CD$TagID)
+ord.DIV_bc.CD$SampLoc <- samp.df.CD$SampLoc
+ord.DIV_bc.CD$Location<-samp.df.CD$Sub.loc
+ord.DIV_bc.CD$Code<-paste(ord.DIV_bc.CD$SampLoc, ord.DIV_bc.CD$Location)
+ord.DIV_bc.CD$Code<-as.factor(ord.DIV_bc.CD$Code)
+
+ggplot(ord.DIV_bc.CD, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = TagID), size = 4,show.legend=T) +
+  #scale_CDolor_manual(values=Sp.CDolors)+
+  # geom_text(label = rownames(Clade), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = TagID),show.legend=T) +
+  ggtitle("NMDS its2 CD only ") +
+  theme_classic()
+#ggsave("bc_all.pdf")
+
+ggplot(ord.DIV_bc.CD, aes(x = NMDS1, y = NMDS2, color = TagID)) +
+  geom_point(aes(colour=TagID), size=4, alpha=.2) +
+  stat_ellipse(geom = "polygon",
+               aes(fill = TagID), 
+               alpha = 0.55)+
+    theme_classic()
+
+ggplot(ord.DIV_bc.CD, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Code), size = 4,show.legend=T) +
+  #scale_Dolor_manual(values=Sp.Dolors)+
+  # geom_text(label = rownames(Clade), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  # stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = Code),show.legend=T) +
+    geom_mark_hull(concavity = 5,expand=0,radius=0,aes(fill=Code))+
+  ggtitle("NMDS its2 CD only ") +
+  theme_classic()
+#ggsave("bc_all.pdf")
+
+
+
+##############   BY COLONY   ##################
 
 #945 ####
 DIV_RelA_stats_945<-subset_samples(coralDIV2.prune_stats, TagID=="945")
@@ -741,27 +1036,60 @@ bc.945 <- phyloseq::distance(coralDIV2.prune_stats, method = "bray")
 #adonis test
 adonis(bc.945 ~ SampLoc, data = samp.df_945)
     
-# Homogeneity of dispersion test
-betaAll <- betadisper(bc.all, samp.df$Species)
-permutest(betaAll, pairwise = T) 
-(bc.all.HSD <- TukeyHSD(betaAll)) #do you need?
-plot(bc.all.HSD)
+
 
 #Ordination NMDS for all species
 set.seed(30)
-ord.DIV_RelA_stats.945 <- ordinate(DIV_RelA_stats_945, "NMDS", "bray", trymax = 100) 
+ord.DIV_RelA_stats.945 <- ordinate(DIV_RelA_stats_945, "NMDS", "bray", trymax = 100)
+  samp.df_945 <- as(sample_data(DIV_RelA_stats_945), "data.frame") #sample df
 stressplot(ord.DIV_RelA_stats.945)
 ord.DIV_RelA_stats.945 <- as.data.frame(cbind(vegan::scores(ord.DIV_RelA_stats.945, display="sites"))) #make df
 ord.DIV_RelA_stats.945$SampLoc <- samp.df_945$SampLoc
 ord.DIV_RelA_stats.945$sample_name <- samp.df_945$sample_name
+ord.DIV_RelA_stats.945$Code<-paste(ord.DIV_RelA_stats.945$SampLoc,samp.df_945$Sub.loc)
 
 ggplot(ord.DIV_RelA_stats.945, aes(x = NMDS1, y = NMDS2)) + 
-  geom_point(aes(colour = SampLoc, shape=SampLoc), size = 4) +
+  geom_point(aes(colour = Code), size = 7) +
   #scale_color_manual(values=Mcap.Parent.colors)+
   #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
   ggtitle("NMDS its2 Bray Curtis 945") +
   theme_classic() 
 #ggsave("bc_all.pdf")
+
+ggplot(ord.DIV_RelA_stats.945, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Code), size = 4,show.legend=T) +
+  #scale_Dolor_manual(values=Sp.Dolors)+
+  # geom_text(label = rownames(Clade), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  # stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = Code),show.legend=T) +
+  geom_mark_ellipse(expand = 0,aes(fill=Code))+
+  ggtitle("NMDS its2 945 only ") +
+  theme_classic()
+#ggsave("bc_all.pdf")
+
+
+
+
+
+# for defense old code for code #### 
+
+ggplot(scores.ord.DIV_RelA_stats, aes(x = NMDS1, y = NMDS2, color = Species, linetype=Treatment)) +
+  geom_point(aes(shape=Treatment), size=4) +
+  stat_ellipse(geom = "polygon",
+               aes(fill = Code3), 
+               alpha = 0.25)+
+    theme_classic()
+
+scores.ord.DIV_RelA_stats$Code4<-paste(scores.ord.DIV_RelA_stats$Species, scores.ord.DIV_RelA_stats$Clade, scores.ord.DIV_RelA_stats$Treatment)
+
+ p<-ggplot(scores.ord.DIV_RelA_stats, aes(x = NMDS1, y = NMDS2, color = Species, linetype=Treatment)) +
+  geom_point(aes(shape=Treatment), size=4) +
+  stat_ellipse(geom = "polygon",
+               aes(fill = Code4), 
+               alpha = 0.25)+
+    theme_classic()
+p+facet_wrap(~Species)
+
+
 
 #960 ####
 DIV_RelA_stats_960<-subset_samples(coralDIV2.prune_stats, TagID=="960")
@@ -787,18 +1115,38 @@ adonis(bc.960 ~ SampLoc, data = samp.df_960)
 set.seed(30)
 ord.DIV_RelA_stats.960 <- ordinate(DIV_RelA_stats_960, "NMDS", "bray", trymax = 100) 
 stressplot(ord.DIV_RelA_stats.960)
+  samp.df_960 <- as(sample_data(DIV_RelA_stats_960), "data.frame") #sample df
 ord.DIV_RelA_stats.960 <- as.data.frame(cbind(vegan::scores(ord.DIV_RelA_stats.960, display="sites"))) #make df
 ord.DIV_RelA_stats.960$SampLoc <- samp.df_960$SampLoc
 ord.DIV_RelA_stats.960$sample_name <- samp.df_960$sample_name
+ord.DIV_RelA_stats.960$Location <- samp.df_960$Location
 
+ord.DIV_RelA_stats.960$Code<-paste(ord.DIV_RelA_stats.960$SampLoc, ord.DIV_RelA_stats.960$Location)
 ggplot(ord.DIV_RelA_stats.960, aes(x = NMDS1, y = NMDS2)) + 
-  geom_point(aes(colour = SampLoc, shape=SampLoc), size = 4) +
+  geom_point(aes(colour = Location), size = 7) +
+  #scale_color_manual(values=Mcap.Parent.colors)+
+  #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  ggtitle("NMDS its2 Bray Curtis 960") +
+  theme_classic() 
+
+#ggsave("bc_all.pdf")
+ggplot(ord.DIV_RelA_stats.960, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Land_Ocean, shape=Code), size = 4) +
   #scale_color_manual(values=Mcap.Parent.colors)+
   #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
   ggtitle("NMDS its2 Bray Curtis 960") +
   theme_classic() 
 #ggsave("bc_all.pdf")
 
+ggplot(ord.DIV_RelA_stats.960, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Code), size = 4,show.legend=T) +
+  #scale_Dolor_manual(values=Sp.Dolors)+
+  # geom_text(label = rownames(Clade), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  # stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = Code),show.legend=T) +
+  geom_mark_ellipse(expand = 0,aes(fill=Code))+
+  ggtitle("NMDS its2 960 only ") +
+  theme_classic()
+#ggsave("bc_all.pdf")
 
 #970 ####
 DIV_RelA_stats_970<-subset_samples(coralDIV2.prune_stats, TagID=="970")
@@ -824,126 +1172,34 @@ adonis(bc.970 ~ SampLoc, data = samp.df_970)
 set.seed(30)
 ord.DIV_RelA_stats.970 <- ordinate(DIV_RelA_stats_970, "NMDS", "bray", trymax = 100) 
 stressplot(ord.DIV_RelA_stats.970)
+  samp.df_970 <- as(sample_data(DIV_RelA_stats_970), "data.frame") #sample df
+
 ord.DIV_RelA_stats.970 <- as.data.frame(cbind(vegan::scores(ord.DIV_RelA_stats.970, display="sites"))) #make df
 ord.DIV_RelA_stats.970$SampLoc <- samp.df_970$SampLoc
 ord.DIV_RelA_stats.970$sample_name <- samp.df_970$sample_name
 ord.DIV_RelA_stats.970$Sub.loc <- samp.df_970$Sub.loc
-ord.DIV_RelA_stats.970$Code<-paste(ord.DIV_RelA_stats.970$SampLoc,ord.DIV_RelA_stats.970$Sub.loc)
+ord.DIV_RelA_stats.970$Location<-samp.df_970$Location
 
 ggplot(ord.DIV_RelA_stats.970, aes(x = NMDS1, y = NMDS2)) + 
-  geom_point(aes(colour = Code, shape=Code), size = 4) +
+  geom_point(aes(colour = Location), size = 7) +
   #scale_color_manual(values=Mcap.Parent.colors)+
   #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  # geom_line(aes(group = Location))+
+    geom_mark_ellipse(expand = 0,aes(fill=Location))+
   ggtitle("NMDS its2 Bray Curtis 970") +
   theme_classic() 
 #ggsave("bc_all.pdf")
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#for defense
-ggplot(scores.ord.DIV_RelA_statsT1, aes(x = NMDS1, y = NMDS2)) + 
-  geom_point(aes(colour = Species, shape=Treatment), size = 4) +
-  #scale_color_manual(values=Mcap.Parent.colors)+
-  #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
-  stat_ellipse(aes(color=Species, fill=4, alpha=0.25)) +
-scale_linetype_manual(values=c(1,2,1,2,1,2,1,2))+
-  ggtitle("NMDS its2 Bray Curtis") +
-  theme_classic()
-
-ggplot(scores.ord.DIV_RelA_statsT1, aes(x = NMDS1, y = NMDS2, color = Species, linetype=Treatment)) +
-  geom_point(aes(shape=Treatment), size=4) +
-  stat_ellipse(geom = "polygon",
-               aes(fill = Code3), 
-               alpha = 0.25)+
-    theme_classic()
-
-scores.ord.DIV_RelA_statsT1$Code4<-paste(scores.ord.DIV_RelA_statsT1$Species, scores.ord.DIV_RelA_statsT1$Clade, scores.ord.DIV_RelA_statsT1$Treatment)
-
- p<-ggplot(scores.ord.DIV_RelA_statsT1, aes(x = NMDS1, y = NMDS2, color = Species, linetype=Treatment)) +
-  geom_point(aes(shape=Treatment), size=4) +
-  stat_ellipse(geom = "polygon",
-               aes(fill = Code4), 
-               alpha = 0.25)+
-    theme_classic()
-p+facet_wrap(~Species)
-
-#TF only
-
-DIV_RelA_stats.TF<-subset_samples(DIV_RelA_stats, Time.Point=="TF")
-  DIV_RelA_stats.TF = prune_taxa(taxa_sums(DIV_RelA_stats.TF) > 0, DIV_RelA_stats.TF) #this removes any OTU with 0s
-
-#bray curtis presence-absense and abundance
-
-#all speices
-set.seed(30)
-
-#make bray curtis data matrix
-bc.all <- phyloseq::distance(DIV_RelA_stats.TF, method = "bray")
-  samp.df <- as(sample_data(DIV_RelA_stats.TF), "data.frame") #sample df
-#adonis test
-adonis(bc.all ~ Species*Treatment, data = samp.df)
-    
-
-# Homogeneity of dispersion test
-betaAll <- betadisper(bc.all, samp.df$Species)
-permutest(betaAll, pairwise = T) 
-(bc.all.HSD <- TukeyHSD(betaAll)) #do you need?
-plot(bc.all.HSD)
-
-
-#Ordination NMDS for all species
-set.seed(30)
-ord.DIV_RelA_stats.TF <- ordinate(DIV_RelA_stats.TF, "NMDS", "bray", trymax = 100) 
-stressplot(ord.DIV_RelA_stats.TF)
-scores.ord.DIV_RelA_stats <- as.data.frame(cbind(vegan::scores(ord.DIV_RelA_stats.TF, display="sites"))) #make df
-scores.ord.DIV_RelA_stats$Treatment <- samp.df$Treatment
-scores.ord.DIV_RelA_stats$Species <- samp.df$Species
-scores.ord.DIV_RelA_stats$Clade <- samp.df$Clade
-scores.ord.DIV_RelA_stats$Code3<-paste(scores.ord.DIV_RelA_stats$Species,scores.ord.DIV_RelA_stats$Treatment)
-
-ggplot(scores.ord.DIV_RelA_stats, aes(x = NMDS1, y = NMDS2)) + 
-  geom_point(aes(colour = Species, shape=Treatment), size = 4) +
-  #scale_color_manual(values=Mcap.Parent.colors)+
-  #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
-  stat_ellipse(aes(x = NMDS1, y = NMDS2, color=Species, group=Code3,lty = Code3)) +
-scale_linetype_manual(values=c(1,2,1,2,1,2,1,2))+
-  ggtitle("NMDS its2 Bray Curtis TF") +
+ggplot(ord.DIV_RelA_stats.970, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Location), size = 4,show.legend=T) +
+  #scale_Dolor_manual(values=Sp.Dolors)+
+  # geom_text(label = rownames(Clade), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = Location),show.legend=T) +
+  # geom_line(aes(group = Location),color="grey")+
+  ggtitle("NMDS its2 970 only ") +
   theme_classic()
 #ggsave("bc_all.pdf")
 
-#for defense
-
-ggplot(scores.ord.DIV_RelA_stats, aes(x = NMDS1, y = NMDS2, color = Species, linetype=Treatment)) +
-  geom_point(aes(shape=Treatment), size=4) +
-  stat_ellipse(geom = "polygon",
-               aes(fill = Code3), 
-               alpha = 0.25)+
-    theme_classic()
-
-scores.ord.DIV_RelA_stats$Code4<-paste(scores.ord.DIV_RelA_stats$Species, scores.ord.DIV_RelA_stats$Clade, scores.ord.DIV_RelA_stats$Treatment)
-
- p<-ggplot(scores.ord.DIV_RelA_stats, aes(x = NMDS1, y = NMDS2, color = Species, linetype=Treatment)) +
-  geom_point(aes(shape=Treatment), size=4) +
-  stat_ellipse(geom = "polygon",
-               aes(fill = Code4), 
-               alpha = 0.25)+
-    theme_classic()
-p+facet_wrap(~Species)
 
 
 #966 ####
@@ -967,14 +1223,28 @@ stressplot(ord.DIV_RelA_stats.966)
 ord.DIV_RelA_stats.966 <- as.data.frame(cbind(vegan::scores(ord.DIV_RelA_stats.966, display="sites"))) #make df
 ord.DIV_RelA_stats.966$SampLoc <- samp.df_966$SampLoc
 ord.DIV_RelA_stats.966$sample_name <- samp.df_966$sample_name
+ord.DIV_RelA_stats.966$Code <- paste(samp.df_966$SampLoc, samp.df_966$Sub.loc)
+
 
 ggplot(ord.DIV_RelA_stats.966, aes(x = NMDS1, y = NMDS2)) + 
-  geom_point(aes(colour = SampLoc, shape=SampLoc), size = 4) +
+  geom_point(aes(colour = Code), size = 4) +
   #scale_color_manual(values=Mcap.Parent.colors)+
   #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
   ggtitle("NMDS its2 Bray Curtis 966") +
   theme_classic() 
 #ggsave("bc_all.pdf")
+
+
+ggplot(ord.DIV_RelA_stats.966, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Code), size = 4,show.legend=T) +
+  #scale_Dolor_manual(values=Sp.Dolors)+
+  # geom_text(label = rownames(Clade), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  # stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = Code),show.legend=T) +
+  geom_mark_ellipse(expand = 0,aes(fill=Code))+
+  ggtitle("NMDS its2 966 only ") +
+  theme_classic()
+#ggsave("bc_all.pdf")
+
 
 #981 ####
 DIV_RelA_stats_981<-subset_samples(coralDIV2.prune_stats, TagID=="981")
@@ -999,15 +1269,26 @@ stressplot(ord.DIV_RelA_stats.981)
 ord.DIV_RelA_stats.981 <- as.data.frame(cbind(vegan::scores(ord.DIV_RelA_stats.981, display="sites"))) #make df
 ord.DIV_RelA_stats.981$SampLoc <- samp.df_981$SampLoc
 ord.DIV_RelA_stats.981$sample_name <- samp.df_981$sample_name
-ord.DIV_RelA_stats.981$Sub.loc <- samp.df_981$Sub.loc
-ord.DIV_RelA_stats.981$Code<-paste(ord.DIV_RelA_stats.981$SampLoc,ord.DIV_RelA_stats.981$Sub.loc)
+ord.DIV_RelA_stats.981$Location <- samp.df_981$Location
 
 ggplot(ord.DIV_RelA_stats.981, aes(x = NMDS1, y = NMDS2)) + 
-  geom_point(aes(colour = Code, shape=Code), size = 4) +
+  geom_point(aes(colour = Location, shape=Location), size = 4) +
   #scale_color_manual(values=Mcap.Parent.colors)+
   #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
   ggtitle("NMDS its2 Bray Curtis 981") +
   theme_classic() 
+#ggsave("bc_all.pdf")
+
+ggplot(ord.DIV_RelA_stats.981, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Location), size = 4,show.legend=T) +
+  #scale_Dolor_manual(values=Sp.Dolors)+
+  # geom_text(label = rownames(Clade), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  # stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = Code),show.legend=T) +
+  # geom_mark_ellipse(expand = 0,aes(fill=Location))+
+    geom_mark_hull(expand = 0,aes(fill=Location))+
+
+  ggtitle("NMDS its2 981 only ") +
+  theme_classic()
 #ggsave("bc_all.pdf")
 
 
@@ -1034,17 +1315,27 @@ stressplot(ord.DIV_RelA_stats.957)
 ord.DIV_RelA_stats.957 <- as.data.frame(cbind(vegan::scores(ord.DIV_RelA_stats.957, display="sites"))) #make df
 ord.DIV_RelA_stats.957$SampLoc <- samp.df_957$SampLoc
 ord.DIV_RelA_stats.957$sample_name <- samp.df_957$sample_name
-ord.DIV_RelA_stats.957$Sub.loc <- samp.df_957$Sub.loc
-ord.DIV_RelA_stats.957$Code<-paste(ord.DIV_RelA_stats.957$SampLoc,ord.DIV_RelA_stats.957$Sub.loc)
+ord.DIV_RelA_stats.957$Location <- samp.df_957$Location
 
 ggplot(ord.DIV_RelA_stats.957, aes(x = NMDS1, y = NMDS2)) + 
-  geom_point(aes(colour = Code, shape=Code), size = 4) +
+  geom_point(aes(colour = Location), size = 7) +
   #scale_color_manual(values=Mcap.Parent.colors)+
   #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
   ggtitle("NMDS its2 Bray Curtis 957") +
   theme_classic() 
 #ggsave("bc_all.pdf")
 
+ggplot(ord.DIV_RelA_stats.957, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Location), size = 4,show.legend=T) +
+  #scale_Dolor_manual(values=Sp.Dolors)+
+  # geom_text(label = rownames(Clade), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  # stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = Code),show.legend=T) +
+  # geom_mark_ellipse(expand = 0,aes(fill=Location))+
+    geom_mark_hull(expand = 0,aes(fill=Location))+
+
+  ggtitle("NMDS its2 957 only ") +
+  theme_classic()
+#ggsave("bc_all.pdf")
 
 
 
@@ -1072,18 +1363,144 @@ stressplot(ord.DIV_RelA_stats.985)
 ord.DIV_RelA_stats.985 <- as.data.frame(cbind(vegan::scores(ord.DIV_RelA_stats.985, display="sites"))) #make df
 ord.DIV_RelA_stats.985$SampLoc <- samp.df_985$SampLoc
 ord.DIV_RelA_stats.985$sample_name <- samp.df_985$sample_name
-ord.DIV_RelA_stats.985$Sub.loc <- samp.df_985$Sub.loc
-ord.DIV_RelA_stats.985$Code<-paste(ord.DIV_RelA_stats.985$SampLoc,ord.DIV_RelA_stats.985$Sub.loc)
+ord.DIV_RelA_stats.985$Location <- samp.df_985$Location
 
 ggplot(ord.DIV_RelA_stats.985, aes(x = NMDS1, y = NMDS2)) + 
-  geom_point(aes(colour = Code), size = 4) +
+  geom_point(aes(colour = Location), size = 7) +
   #scale_color_manual(values=Mcap.Parent.colors)+
   #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
   ggtitle("NMDS its2 Bray Curtis 985") +
   theme_classic() 
 #ggsave("bc_all.pdf")
 
+ggplot(ord.DIV_RelA_stats.985, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Location), size = 4,show.legend=T) +
+  #scale_Dolor_manual(values=Sp.Dolors)+
+  # geom_text(label = rownames(Clade), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  # stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = Code),show.legend=T) +
+  geom_mark_hull(expand = 0,aes(fill=Location))+
+  ggtitle("NMDS its2 985 only ") +
+  theme_classic()
+#ggsave("bc_all.pdf")
 
+
+#959 ####
+DIV_RelA_stats_959<-subset_samples(coralDIV2.prune_stats, TagID=="959")
+  DIV_RelA_stats_959 = prune_taxa(taxa_sums(DIV_RelA_stats_959) > 0, DIV_RelA_stats_959) #this removes any OTU with 0s
+
+#all speices
+set.seed(30)
+
+#make bray curtis data matrix
+bc.959 <- phyloseq::distance(coralDIV2.prune_stats, method = "bray")
+  samp.df_959 <- as(sample_data(coralDIV2.prune_stats), "data.frame") #sample df
+#adonis test
+adonis(bc.959 ~ SampLoc, data = samp.df_959)
+
+
+#Ordination NMDS for all species
+set.seed(30)
+ord.DIV_RelA_stats.959 <- ordinate(DIV_RelA_stats_959, "NMDS", "bray", trymax = 100) 
+stressplot(ord.DIV_RelA_stats.959)
+  samp.df_959 <- as(sample_data(DIV_RelA_stats_959), "data.frame") #sample df
+
+ord.DIV_RelA_stats.959 <- as.data.frame(cbind(vegan::scores(ord.DIV_RelA_stats.959, display="sites"))) #make df
+ord.DIV_RelA_stats.959$SampLoc <- samp.df_959$SampLoc
+ord.DIV_RelA_stats.959$sample_name <- samp.df_959$sample_name
+ord.DIV_RelA_stats.959$Sub.loc <- samp.df_959$Sub.loc
+ord.DIV_RelA_stats.959$Code<-paste(ord.DIV_RelA_stats.959$SampLoc,ord.DIV_RelA_stats.959$Sub.loc)
+
+ggplot(ord.DIV_RelA_stats.959, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Code), size = 7) +
+  #scale_color_manual(values=Mcap.Parent.colors)+
+  #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  ggtitle("NMDS its2 Bray Curtis 959") +
+  theme_classic() 
+#ggsave("bc_all.pdf")
+
+ggplot(ord.DIV_RelA_stats.959, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Sub.loc), size = 4,show.legend=T) +
+  #scale_Dolor_manual(values=Sp.Dolors)+
+  # geom_text(label = rownames(Clade), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  # stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = Code),show.legend=T) +
+  geom_mark_hull(expand = 0,aes(fill=Sub.loc))+
+  ggtitle("NMDS its2 959 only ") +
+  theme_classic()
+#ggsave("bc_all.pdf")
+
+
+#961 ####
+DIV_RelA_stats_961<-subset_samples(coralDIV2.prune_stats, TagID=="961")
+  DIV_RelA_stats_961 = prune_taxa(taxa_sums(DIV_RelA_stats_961) > 0, DIV_RelA_stats_961) #this removes any OTU with 0s
+
+#all speices
+set.seed(30)
+
+#make bray curtis data matrix
+bc.961 <- phyloseq::distance(coralDIV2.prune_stats, method = "bray")
+  samp.df_961 <- as(sample_data(coralDIV2.prune_stats), "data.frame") #sample df
+#adonis test
+adonis(bc.961 ~ SampLoc, data = samp.df_961)
+
+
+#Ordination NMDS for all species
+set.seed(30)
+ord.DIV_RelA_stats.961 <- ordinate(DIV_RelA_stats_961, "NMDS", "bray", trymax = 100) 
+stressplot(ord.DIV_RelA_stats.961)
+  samp.df_961 <- as(sample_data(DIV_RelA_stats_961), "data.frame") #sample df
+
+ord.DIV_RelA_stats.961 <- as.data.frame(cbind(vegan::scores(ord.DIV_RelA_stats.961, display="sites"))) #make df
+ord.DIV_RelA_stats.961$SampLoc <- samp.df_961$SampLoc
+ord.DIV_RelA_stats.961$sample_name <- samp.df_961$sample_name
+ord.DIV_RelA_stats.961$Sub.loc <- samp.df_961$Sub.loc
+ord.DIV_RelA_stats.961$Code<-paste(ord.DIV_RelA_stats.961$SampLoc,ord.DIV_RelA_stats.961$Sub.loc)
+
+ggplot(ord.DIV_RelA_stats.961, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Code), size = 7) +
+  #scale_color_manual(values=Mcap.Parent.colors)+
+  #geom_text(label = rownames(scores), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  ggtitle("NMDS its2 Bray Curtis 961") +
+  theme_classic() 
+#ggsave("bc_all.pdf")
+
+ggplot(ord.DIV_RelA_stats.961, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = Code), size = 4,show.legend=T) +
+  #scale_Dolor_manual(values=Sp.Dolors)+
+  # geom_text(label = rownames(Clade), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  # stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = Code),show.legend=T) +
+  geom_mark_hull(expand = 0,aes(fill=Code))+
+  ggtitle("NMDS its2 961 only ") +
+  theme_classic()
+#ggsave("bc_all.pdf")
+
+
+
+
+######### Try by tips and bases only #### 
+coralDIV2.prune_statsBranch<-subset_samples(coralDIV2.prune_stats, SampLoc=="Branch")
+coralDIV2.prune_statsBranch = prune_taxa(taxa_sums(coralDIV2.prune_statsBranch) > 0, coralDIV2.prune_statsBranch)
+  
+set.seed(10)
+ord.DIV_bc.Branch <- ordinate(coralDIV2.prune_statsBranch, "NMDS", "bray", trymax = 500)  ### NO CONVERGENCE
+stressplot(ord.DIV_bc.Branch)
+  samp.df.Branch <- as(sample_data(coralDIV2.prune_statsBranch), "data.frame") #sample df
+
+ord.DIV_bc.Branch <- as.data.frame(cbind(vegan::scores(ord.DIV_bc.Branch, display="sites"))) #make df
+ord.DIV_bc.Branch$TagID <- samp.df.Branch$TagID
+ord.DIV_bc.Branch$TagID<-as.factor(ord.DIV_bc.Branch$TagID)
+ord.DIV_bc.Branch$SampLoc <- samp.df.Branch$SampLoc
+ord.DIV_bc.Branch$Location<-samp.df.Branch$Sub.loc
+ord.DIV_bc.Branch$Code<-paste(ord.DIV_bc.Branch$SampLoc, ord.DIV_bc.Branch$Location)
+ord.DIV_bc.Branch$Code<-as.factor(ord.DIV_bc.Branch$Code)
+
+ggplot(ord.DIV_bc.Branch, aes(x = NMDS1, y = NMDS2)) + 
+  geom_point(aes(colour = TagID), size = 4,show.legend=T) +
+  #scaleBrancholor_manual(values=Sp.Brancholors)+
+  # geom_text(label = rownames(Clade), nudge_x = 0.05, nudge_y = 0.05,check_overlap = T) +
+  stat_ellipse(aes(x = NMDS1, y = NMDS2, colour = TagID),show.legend=T) +
+  ggtitle("NMDS its2 C only ") +
+  themeBranchlassic()
+#ggsave("bc_all.pdf")
 ```
 
 
