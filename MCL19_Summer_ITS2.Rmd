@@ -667,7 +667,7 @@ as_tibble(OTUdf)
 
 OTUdf<-OTUdf%>%
   rename(C1 = `87732`) %>%
-  rename( C2 = `87257`) %>%
+  rename( C2 = `87257`) %>%sw
   rename( D1 = `87918`) %>%
   rename( D2 = `87537`)
 
@@ -682,6 +682,18 @@ OTUdf<-OTUdf %>%
     mutate(samp.num = as.numeric(str_extract(sample.name, "[0-9]+"))) %>%   #extract number in samp name
       mutate(samp.let = as.character(str_extract(sample.name, "[A-Z]+")))   # extract letter in samp name
 #Next enter genotype letter combo
+
+tibble(OTUdf) 
+
+OTUdf<-OTUdf%>%              
+  rowwise() %>%
+      mutate(
+        C = sum(c_across(2:3)),
+        D = sum(c_across(4:5)))
+
+write.csv(OTUdf, "Clade.samps.csv")     
+  
+
 
 ```
 
